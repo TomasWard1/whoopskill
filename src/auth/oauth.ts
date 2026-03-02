@@ -10,8 +10,10 @@ const WHOOP_AUTH_URL = 'https://api.prod.whoop.com/oauth/oauth2/auth';
 const WHOOP_TOKEN_URL = 'https://api.prod.whoop.com/oauth/oauth2/token';
 const SCOPES = 'read:profile read:body_measurement read:workout read:recovery read:sleep read:cycles offline';
 
+const DEFAULT_REDIRECT_URI = 'http://localhost:8787/callback';
+
 function prompt(question: string): Promise<string> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const rl = createInterface({ input: process.stdin, output: process.stderr });
   return new Promise((resolve) => {
     rl.question(question, (answer) => {
       rl.close();
@@ -20,27 +22,70 @@ function prompt(question: string): Promise<string> {
   });
 }
 
+function promptSecret(question: string): Promise<string> {
+  return new Promise((resolve) => {
+    process.stderr.write(question);
+    const stdin = process.stdin;
+    if (!stdin.isTTY) return resolve('');
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding('utf8');
+
+    let input = '';
+    const onData = (char: string) => {
+      if (char === '\n' || char === '\r') {
+        stdin.setRawMode(false);
+        stdin.pause();
+        stdin.removeListener('data', onData);
+        process.stderr.write('\n');
+        resolve(input.trim());
+      } else if (char === '\u0003') {
+        stdin.setRawMode(false);
+        process.exit(130);
+      } else if (char === '\u007f' || char === '\b') {
+        if (input.length > 0) {
+          input = input.slice(0, -1);
+          process.stderr.write('\b \b');
+        }
+      } else {
+        input += char;
+        process.stderr.write('*');
+      }
+    };
+    stdin.on('data', onData);
+  });
+}
+
 async function resolveCredentials(): Promise<{ clientId: string; clientSecret: string; redirectUri: string }> {
   const stored = getStoredCredentials();
   if (stored) return stored;
 
-  // Interactive onboarding — prompt for credentials
-  console.error('No WHOOP credentials found. Let\'s set them up.\n');
-  console.error('Get your credentials at: https://developer.whoop.com\n');
+  // Interactive onboarding
+  console.error('');
+  console.error('  WHOOP CLI — First-time setup');
+  console.error('  ────────────────────────────');
+  console.error('');
+  console.error('  1. Go to https://developer.whoop.com');
+  console.error('  2. Create an application (apps with <10 users need no review)');
+  console.error('  3. Set the Redirect URI to: ' + DEFAULT_REDIRECT_URI);
+  console.error('  4. Copy your Client ID and Client Secret below');
+  console.error('');
+  console.error('  Everything stays local in ~/.whoop-cli/config.json');
+  console.error('');
 
-  const clientId = await prompt('Client ID: ');
-  const clientSecret = await prompt('Client Secret: ');
-  let redirectUri = await prompt('Redirect URI (enter for http://localhost:8787/callback): ');
-  if (!redirectUri) redirectUri = 'http://localhost:8787/callback';
+  const clientId = await prompt('  Client ID: ');
+  const clientSecret = await promptSecret('  Client Secret: ');
 
   if (!clientId || !clientSecret) {
     throw new WhoopError('Client ID and Client Secret are required', ExitCode.AUTH_ERROR);
   }
 
-  saveConfig({ client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri });
-  console.error('\nCredentials saved to ~/.whoop-cli/config.json\n');
+  saveConfig({ client_id: clientId, client_secret: clientSecret, redirect_uri: DEFAULT_REDIRECT_URI });
+  console.error('');
+  console.error('  ✓ Credentials saved to ~/.whoop-cli/config.json');
+  console.error('');
 
-  return { clientId, clientSecret, redirectUri };
+  return { clientId, clientSecret, redirectUri: DEFAULT_REDIRECT_URI };
 }
 
 export async function login(): Promise<void> {

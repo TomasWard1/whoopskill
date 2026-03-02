@@ -28,14 +28,16 @@ export function saveConfig(config: CliConfig): void {
   chmodSync(CONFIG_FILE, 0o600);
 }
 
+const DEFAULT_REDIRECT_URI = 'http://localhost:8787/callback';
+
 export function getCredentials(): { clientId: string; clientSecret: string; redirectUri: string } | null {
   // Priority: env vars > config file
   const envId = process.env.WHOOP_CLIENT_ID;
   const envSecret = process.env.WHOOP_CLIENT_SECRET;
   const envUri = process.env.WHOOP_REDIRECT_URI;
 
-  if (envId && envSecret && envUri) {
-    return { clientId: envId, clientSecret: envSecret, redirectUri: envUri };
+  if (envId && envSecret) {
+    return { clientId: envId, clientSecret: envSecret, redirectUri: envUri || DEFAULT_REDIRECT_URI };
   }
 
   const config = loadConfig();

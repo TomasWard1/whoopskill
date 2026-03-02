@@ -86,6 +86,18 @@ describe('getCredentials', () => {
     });
   });
 
+  it('uses default redirect URI when only ID and secret in env', () => {
+    process.env.WHOOP_CLIENT_ID = 'env-id';
+    process.env.WHOOP_CLIENT_SECRET = 'env-secret';
+
+    const creds = getCredentials();
+    expect(creds).toEqual({
+      clientId: 'env-id',
+      clientSecret: 'env-secret',
+      redirectUri: 'http://localhost:8787/callback',
+    });
+  });
+
   it('falls back to config file when env vars missing', () => {
     vi.mocked(existsSync).mockReturnValue(true);
     vi.mocked(readFileSync).mockReturnValue(JSON.stringify({
