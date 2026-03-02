@@ -98,7 +98,7 @@ export async function getValidTokens(): Promise<TokenData> {
   let tokens = loadTokens();
 
   if (!tokens) {
-    throw new WhoopError('Not authenticated. Run: whoopskill auth login', ExitCode.AUTH_ERROR);
+    throw new WhoopError('Not authenticated. Run: whoop-cli auth login', ExitCode.AUTH_ERROR);
   }
 
   if (isTokenExpired(tokens)) {

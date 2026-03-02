@@ -1,10 +1,10 @@
 {
-  "name": "whoopskill",
-  "version": "1.1.0",
-  "description": "CLI for fetching WHOOP health data",
+  "name": "whoop-cli",
+  "version": "2.0.0",
+  "description": "Agent-first CLI for the WHOOP API",
   "type": "module",
   "bin": {
-    "whoopskill": "./dist/index.js"
+    "whoop-cli": "./dist/index.js"
   },
   "main": "./dist/index.js",
   "scripts": {

@@ -4,16 +4,16 @@ set -euo pipefail
 # whoop-refresh-monitor.sh
 #
 # Purpose:
-# - Prevent silent failures when running whoopskill from cron/systemd by proactively refreshing tokens.
+# - Prevent silent failures when running whoop-cli from cron/systemd by proactively refreshing tokens.
 # - Optionally emits a simple health snapshot to confirm the API is reachable.
 #
 # Requires:
-# - whoopskill installed and authenticated at least once: `whoopskill auth login`
+# - whoop-cli installed and authenticated at least once: `whoop-cli auth login`
 # - WHOOP_CLIENT_ID / WHOOP_CLIENT_SECRET / WHOOP_REDIRECT_URI configured (env or .env)
 #
 # Notes:
 # - This script does NOT re-run the browser login flow. If refresh fails due to expired refresh token,
-#   you must run: `whoopskill auth login`
+#   you must run: `whoop-cli auth login`
 
 LOG_FILE="${WHOOP_MONITOR_LOG_FILE:-$HOME/.whoop-cli/monitor.log}"
 VERBOSE="${WHOOP_MONITOR_VERBOSE:-0}"
@@ -23,8 +23,8 @@ mkdir -p "$(dirname "$LOG_FILE")"
 stamp() { date -Iseconds; }
 
 # Attempt refresh (will exit non-zero if refresh token is expired/invalid)
-if ! out=$(whoopskill auth refresh 2>&1); then
-  echo "$(stamp) | ALERT: whoopskill auth refresh failed. Run: whoopskill auth login" >> "$LOG_FILE"
+if ! out=$(whoop-cli auth refresh 2>&1); then
+  echo "$(stamp) | ALERT: whoop-cli auth refresh failed. Run: whoop-cli auth login" >> "$LOG_FILE"
   echo "$(stamp) | Details: $out" >> "$LOG_FILE"
   if [ "$VERBOSE" = "1" ]; then
     echo "$out" >&2
@@ -34,8 +34,8 @@ fi
 
 # Optional lightweight fetch to validate end-to-end (cycle is usually present during the day)
 # This should be cheap and avoids paging through large datasets.
-if ! data=$(whoopskill --cycle 2>/dev/null); then
-  echo "$(stamp) | ALERT: whoopskill fetch failed" >> "$LOG_FILE"
+if ! data=$(whoop-cli --cycle 2>/dev/null); then
+  echo "$(stamp) | ALERT: whoop-cli fetch failed" >> "$LOG_FILE"
   exit 3
 fi
 

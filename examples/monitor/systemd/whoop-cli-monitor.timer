@@ -1,5 +1,5 @@
 [Unit]
-Description=Run whoopskill monitor periodically
+Description=Run whoop-cli monitor periodically
 
 [Timer]
 # Every 30 minutes (adjust to taste)

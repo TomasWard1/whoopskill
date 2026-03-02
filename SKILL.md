@@ -1,27 +1,27 @@
 ---
-name: whoopskill
+name: whoop-cli
 description: WHOOP CLI with health insights, trends analysis, and data fetching (sleep, recovery, HRV, strain).
-homepage: https://github.com/koala73/whoopskill
-metadata: {"clawdis":{"emoji":"💪","requires":{"bins":["node"],"env":["WHOOP_CLIENT_ID","WHOOP_CLIENT_SECRET","WHOOP_REDIRECT_URI"]},"install":[{"id":"npm","kind":"npm","package":"whoopskill","bins":["whoopskill"],"label":"Install whoopskill (npm)"}]}}
+homepage: https://github.com/TomasWard1/whoop-cli
+metadata: {"clawdis":{"emoji":"💪","requires":{"bins":["node"],"env":["WHOOP_CLIENT_ID","WHOOP_CLIENT_SECRET","WHOOP_REDIRECT_URI"]},"install":[{"id":"npm","kind":"npm","package":"whoop-cli","bins":["whoop-cli"],"label":"Install whoop-cli (npm)"}]}}
 ---
 
-# whoopskill
+# whoop-cli
 
-Use `whoopskill` to fetch WHOOP health metrics (sleep, recovery, HRV, strain, workouts).
+Use `whoop-cli` to fetch WHOOP health metrics (sleep, recovery, HRV, strain, workouts).
 
-Install: `npm install -g whoopskill` | [GitHub](https://github.com/koala73/whoopskill)
+Install: `npm install -g whoop-cli` | [GitHub](https://github.com/TomasWard1/whoop-cli)
 
 Quick start
-- `whoopskill summary` — one-liner: Recovery: 52% | HRV: 39ms | Sleep: 40% | Strain: 6.7
-- `whoopskill summary --color` — color-coded summary with 🟢🟡🔴 status indicators
-- `whoopskill trends` — 7-day trends with averages and direction arrows
-- `whoopskill trends --days 30 --pretty` — 30-day trend analysis
-- `whoopskill insights --pretty` — AI-style health recommendations
-- `whoopskill --pretty` — human-readable output with emojis
-- `whoopskill recovery` — recovery score, HRV, RHR
-- `whoopskill sleep` — sleep performance, stages
-- `whoopskill workout` — workouts with strain
-- `whoopskill --date 2025-01-03` — specific date
+- `whoop-cli summary` — one-liner: Recovery: 52% | HRV: 39ms | Sleep: 40% | Strain: 6.7
+- `whoop-cli summary --color` — color-coded summary with 🟢🟡🔴 status indicators
+- `whoop-cli trends` — 7-day trends with averages and direction arrows
+- `whoop-cli trends --days 30 --pretty` — 30-day trend analysis
+- `whoop-cli insights --pretty` — AI-style health recommendations
+- `whoop-cli --pretty` — human-readable output with emojis
+- `whoop-cli recovery` — recovery score, HRV, RHR
+- `whoop-cli sleep` — sleep performance, stages
+- `whoop-cli workout` — workouts with strain
+- `whoop-cli --date 2025-01-03` — specific date
 
 Analysis commands
 - `summary` — quick health snapshot (add `--color` for status indicators)
@@ -37,12 +37,12 @@ Data types
 - `cycle` — daily strain, calories
 
 Combine types
-- `whoopskill --sleep --recovery --body`
+- `whoop-cli --sleep --recovery --body`
 
 Auth
-- `whoopskill auth login` — OAuth flow (opens browser)
-- `whoopskill auth status` — check token status
-- `whoopskill auth logout` — clear tokens
+- `whoop-cli auth login` — OAuth flow (opens browser)
+- `whoop-cli auth status` — check token status
+- `whoop-cli auth logout` — clear tokens
 
 Notes
 - Output is JSON to stdout (use `--pretty` for human-readable)
@@ -51,7 +51,7 @@ Notes
 - Date follows WHOOP day boundary (4am cutoff)
 - WHOOP apps with <10 users don't need review (immediate use)
 
-Sample: `whoopskill summary --color`
+Sample: `whoop-cli summary --color`
 ```
 📅 2026-01-25
 🟢 Recovery: 85% | HRV: 39ms | RHR: 63bpm
@@ -59,7 +59,7 @@ Sample: `whoopskill summary --color`
 🔴 Strain: 0.1 (optimal: ~14) | 579 cal
 ```
 
-Sample: `whoopskill trends`
+Sample: `whoop-cli trends`
 ```
 📊 7-Day Trends
 
@@ -71,7 +71,7 @@ Sample: `whoopskill trends`
 🔥 Strain: 5.9 avg (0.1-9.0) ↓
 ```
 
-Sample: `whoopskill insights`
+Sample: `whoop-cli insights`
 ```
 💡 Insights & Recommendations
 
@@ -92,7 +92,7 @@ Sample: `whoopskill insights`
    → Room for 13.9 more strain today.
 ```
 
-Sample: `whoopskill --sleep --recovery` (JSON)
+Sample: `whoop-cli --sleep --recovery` (JSON)
 ```json
 {
   "date": "2026-01-05",
