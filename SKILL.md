@@ -1,200 +1,109 @@
 ---
 name: whoop-cli
-description: WHOOP CLI with health insights, trends analysis, and data fetching (sleep, recovery, HRV, strain).
+description: Agent-first WHOOP CLI — health metrics, insights, and trend analysis via structured JSON.
 homepage: https://github.com/TomasWard1/whoop-cli
 metadata: {"clawdis":{"emoji":"💪","requires":{"bins":["node"],"env":["WHOOP_CLIENT_ID","WHOOP_CLIENT_SECRET","WHOOP_REDIRECT_URI"]},"install":[{"id":"npm","kind":"npm","package":"whoop-cli","bins":["whoop-cli"],"label":"Install whoop-cli (npm)"}]}}
 ---
 
 # whoop-cli
 
-Use `whoop-cli` to fetch WHOOP health metrics (sleep, recovery, HRV, strain, workouts).
+Agent-first CLI for WHOOP health data. All commands output JSON to stdout when piped, pretty text when interactive.
 
 Install: `npm install -g whoop-cli` | [GitHub](https://github.com/TomasWard1/whoop-cli)
 
-Quick start
-- `whoop-cli summary` — one-liner: Recovery: 52% | HRV: 39ms | Sleep: 40% | Strain: 6.7
-- `whoop-cli summary --color` — color-coded summary with 🟢🟡🔴 status indicators
-- `whoop-cli trends` — 7-day trends with averages and direction arrows
-- `whoop-cli trends --days 30 --pretty` — 30-day trend analysis
-- `whoop-cli insights --pretty` — AI-style health recommendations
-- `whoop-cli --pretty` — human-readable output with emojis
-- `whoop-cli recovery` — recovery score, HRV, RHR
-- `whoop-cli sleep` — sleep performance, stages
-- `whoop-cli workout` — workouts with strain
-- `whoop-cli --date 2025-01-03` — specific date
+## Agent quick start
 
-Analysis commands
-- `summary` — quick health snapshot (add `--color` for status indicators)
-- `trends` — multi-day averages with trend arrows (↑↓→)
-- `insights` — personalized recommendations based on your data
+```bash
+# Health check (one call, flat JSON)
+whoop-cli check
+# → {"ok":true,"checked_at":"...","recovery_score":72,"hrv_rmssd_milli":45.2,"sleep_hours":7.1,"strain":8.3}
 
-Data types
-- `profile` — user info (name, email)
-- `body` — height, weight, max HR
-- `sleep` — sleep stages, efficiency, respiratory rate
-- `recovery` — recovery %, HRV, RHR, SpO2, skin temp
-- `workout` — strain, HR zones, calories
-- `cycle` — daily strain, calories
+# Auth pre-flight (exit code 2 = not authenticated)
+whoop-cli auth status
+echo $?  # 0 = ok, 2 = needs login
 
-Combine types
-- `whoop-cli --sleep --recovery --body`
+# Refresh tokens (for cron jobs)
+whoop-cli auth refresh
+```
 
-Auth
-- `whoop-cli auth login` — OAuth flow (opens browser)
-- `whoop-cli auth status` — check token status
-- `whoop-cli auth logout` — clear tokens
+## Commands
 
-Notes
-- Output is JSON to stdout (use `--pretty` for human-readable)
-- Tokens stored in `~/.whoop-cli/tokens.json` (auto-refresh)
+### check — single-call health snapshot
+```bash
+whoop-cli check                    # today's metrics as flat JSON
+whoop-cli check --date 2026-03-01  # specific date
+```
+Returns: `{ok, checked_at, auth.needs_refresh, date, recovery_score, hrv_rmssd_milli, resting_heart_rate, sleep_performance, sleep_hours, sleep_efficiency, strain, calories, workout_count}`
+
+### summary — one-liner health status
+```bash
+whoop-cli summary                  # JSON when piped, text when interactive
+whoop-cli summary --color          # color-coded with status indicators
+whoop-cli summary --format json    # force JSON
+```
+
+### Data commands — sleep, recovery, workout, cycle, profile, body
+```bash
+whoop-cli recovery                          # today's recovery
+whoop-cli sleep --date 2026-03-01           # specific date
+whoop-cli workout -s 2026-01-01 -e 2026-03-01 -a  # date range, all pages
+whoop-cli cycle --format json               # force JSON output
+```
+
+### multi — multiple data types in one call
+```bash
+whoop-cli multi --sleep --recovery --workout           # today
+whoop-cli multi --sleep --recovery -s 2026-01-01 -e 2026-03-01 -a  # date range
+```
+
+### trends — multi-day trend analysis
+```bash
+whoop-cli trends                    # 7-day trends
+whoop-cli trends --days 30          # 30-day trends (1-90 supported)
+whoop-cli trends --json             # force JSON
+```
+
+### insights — health recommendations
+```bash
+whoop-cli insights                  # today's insights
+whoop-cli insights --date 2026-03-01 --json
+```
+
+### auth — authentication management
+```bash
+whoop-cli auth login    # OAuth flow (opens browser)
+whoop-cli auth status   # JSON status, exit code 2 if not authenticated
+whoop-cli auth refresh  # proactive token refresh (for cron)
+whoop-cli auth logout   # clear tokens
+```
+
+## Output behavior
+
+- **Piped** (no TTY): JSON to stdout. Errors as `{"error":"...","code":2}` to stdout.
+- **Interactive** (TTY): human-readable text. Errors as plain text to stderr.
+- `--format json|pretty|auto` on all data commands (default: auto)
+- `--pretty` shorthand for `--format pretty`
+- `--json` shorthand on trends/insights
+
+## Exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | General error |
+| 2 | Auth error (not logged in, token expired) |
+| 3 | Rate limited |
+| 4 | Network error |
+
+## Date handling
+
+- Default: WHOOP day (4am local time cutoff)
+- `--date YYYY-MM-DD` for specific dates
+- `--start` / `--end` for range queries on data and multi commands
+- `--all` / `-a` to paginate through all results
+
+## Notes
+
+- Tokens stored in `~/.whoop-cli/tokens.json` (auto-refresh on API calls)
 - Uses WHOOP API v2
-- Date follows WHOOP day boundary (4am cutoff)
 - WHOOP apps with <10 users don't need review (immediate use)
-
-Sample: `whoop-cli summary --color`
-```
-📅 2026-01-25
-🟢 Recovery: 85% | HRV: 39ms | RHR: 63bpm
-🟡 Sleep: 79% | 6.9h | Efficiency: 97%
-🔴 Strain: 0.1 (optimal: ~14) | 579 cal
-```
-
-Sample: `whoop-cli trends`
-```
-📊 7-Day Trends
-
-💚 Recovery: 62.1% avg (34-86) →
-💓 HRV: 33.8ms avg (26-42) →
-❤️ RHR: 63.8bpm avg (60-68) →
-😴 Sleep: 75.4% avg (69-79) →
-🛏️ Hours: 6.5h avg (5.7-7.8) ↓
-🔥 Strain: 5.9 avg (0.1-9.0) ↓
-```
-
-Sample: `whoop-cli insights`
-```
-💡 Insights & Recommendations
-
-✅ Green Recovery
-   Recovery at 85% — body is primed for high strain.
-   → Great day for intense training or competition.
-
-✅ HRV Above Baseline
-   Today's HRV (39ms) is 21% above your 7-day average.
-   → Excellent recovery. Good day for peak performance.
-
-⚠️ Mild Sleep Debt
-   You have 2.0 hours of sleep debt.
-   → Consider an earlier bedtime tonight.
-
-✅ Strain Capacity Available
-   Current strain: 0.1. Optimal target: ~14.
-   → Room for 13.9 more strain today.
-```
-
-Sample: `whoop-cli --sleep --recovery` (JSON)
-```json
-{
-  "date": "2026-01-05",
-  "fetched_at": "2026-01-05T13:49:22.782Z",
-  "body": {
-    "height_meter": 1.83,
-    "weight_kilogram": 82.5,
-    "max_heart_rate": 182
-  },
-  "sleep": [
-    {
-      "id": "4c311bd4-370f-49ff-b58c-0578d543e9d2",
-      "cycle_id": 1236731435,
-      "user_id": 245199,
-      "created_at": "2026-01-05T00:23:34.264Z",
-      "updated_at": "2026-01-05T02:23:54.686Z",
-      "start": "2026-01-04T19:51:57.280Z",
-      "end": "2026-01-05T01:30:48.660Z",
-      "timezone_offset": "+04:00",
-      "nap": false,
-      "score_state": "SCORED",
-      "score": {
-        "stage_summary": {
-          "total_in_bed_time_milli": 20331380,
-          "total_awake_time_milli": 4416000,
-          "total_light_sleep_time_milli": 6968320,
-          "total_slow_wave_sleep_time_milli": 4953060,
-          "total_rem_sleep_time_milli": 3994000,
-          "sleep_cycle_count": 4,
-          "disturbance_count": 4
-        },
-        "sleep_needed": {
-          "baseline_milli": 26783239,
-          "need_from_sleep_debt_milli": 6637715,
-          "need_from_recent_strain_milli": 148919
-        },
-        "respiratory_rate": 14.12,
-        "sleep_performance_percentage": 40,
-        "sleep_consistency_percentage": 60,
-        "sleep_efficiency_percentage": 78.28
-      }
-    }
-  ],
-  "workout": [
-    {
-      "id": "4279883e-3d23-45cd-848c-3afa28dca3f8",
-      "user_id": 245199,
-      "start": "2026-01-05T03:14:13.417Z",
-      "end": "2026-01-05T04:06:45.532Z",
-      "sport_name": "hiit",
-      "score_state": "SCORED",
-      "score": {
-        "strain": 6.19,
-        "average_heart_rate": 108,
-        "max_heart_rate": 144,
-        "kilojoule": 819.38,
-        "zone_durations": {
-          "zone_zero_milli": 167000,
-          "zone_one_milli": 1420000,
-          "zone_two_milli": 1234980,
-          "zone_three_milli": 330000,
-          "zone_four_milli": 0,
-          "zone_five_milli": 0
-        }
-      }
-    }
-  ],
-  "profile": {
-    "user_id": 245199,
-    "email": "user@example.com",
-    "first_name": "John",
-    "last_name": "Doe"
-  },
-  "recovery": [
-    {
-      "cycle_id": 1236731435,
-      "sleep_id": "4c311bd4-370f-49ff-b58c-0578d543e9d2",
-      "user_id": 245199,
-      "score_state": "SCORED",
-      "score": {
-        "recovery_score": 52,
-        "resting_heart_rate": 60,
-        "hrv_rmssd_milli": 38.87,
-        "spo2_percentage": 96.4,
-        "skin_temp_celsius": 33.19
-      }
-    }
-  ],
-  "cycle": [
-    {
-      "id": 1236731435,
-      "user_id": 245199,
-      "start": "2026-01-04T19:51:57.280Z",
-      "end": null,
-      "score_state": "SCORED",
-      "score": {
-        "strain": 6.66,
-        "kilojoule": 6172.94,
-        "average_heart_rate": 71,
-        "max_heart_rate": 144
-      }
-    }
-  ]
-}
-```
