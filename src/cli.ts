@@ -135,7 +135,7 @@ program
 
       const endDate = getWhoopDay();
       const startDate = getDaysAgo(days);
-      const params = { start: startDate + 'T00:00:00.000Z', end: endDate + 'T23:59:59.999Z', limit: days + 5 };
+      const params = { start: startDate + 'T00:00:00.000Z', end: endDate + 'T23:59:59.999Z' };
 
       const [recovery, sleep, cycle] = await Promise.all([
         import('./api/client.js').then(m => m.getRecovery(params, true)),
