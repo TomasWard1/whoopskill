@@ -88,10 +88,12 @@ export async function getCycle(params: QueryParams = {}, all = false): Promise<W
 export async function fetchData(
   types: DataType[],
   date: string,
-  options: { limit?: number; all?: boolean } = {}
+  options: { limit?: number; all?: boolean; start?: string; end?: string } = {}
 ): Promise<CombinedOutput> {
-  const { start, end } = getDateRange(date);
-  const params: QueryParams = { start, end, limit: options.limit };
+  const range = options.start && options.end
+    ? { start: options.start, end: options.end }
+    : getDateRange(date);
+  const params: QueryParams = { start: range.start, end: range.end, limit: options.limit };
 
   const output: CombinedOutput = {
     date,

@@ -61,10 +61,18 @@ function addDataCommand(name: string, description: string, dataType: DataType): 
         if (options.date && !validateISODate(options.date)) {
           throw new WhoopError('Invalid date format. Use YYYY-MM-DD', ExitCode.GENERAL_ERROR);
         }
+        if (options.start && !validateISODate(options.start)) {
+          throw new WhoopError('Invalid start date format. Use YYYY-MM-DD', ExitCode.GENERAL_ERROR);
+        }
+        if (options.end && !validateISODate(options.end)) {
+          throw new WhoopError('Invalid end date format. Use YYYY-MM-DD', ExitCode.GENERAL_ERROR);
+        }
 
         const result = await fetchData([dataType], date, {
           limit: parseInt(options.limit, 10),
           all: options.all,
+          start: options.start ? options.start + 'T00:00:00.000Z' : undefined,
+          end: options.end ? options.end + 'T23:59:59.999Z' : undefined,
         });
 
         output(result, options.pretty);
@@ -159,6 +167,8 @@ program
   });
 
 program
+  .command('multi')
+  .description('Fetch multiple data types at once')
   .option('-d, --date <date>', 'Date in ISO format (YYYY-MM-DD)')
   .option('-l, --limit <number>', 'Max results per page', '25')
   .option('-a, --all', 'Fetch all pages')
@@ -180,8 +190,7 @@ program
       if (options.body) types.push('body');
 
       if (types.length === 0) {
-        program.help();
-        return;
+        throw new WhoopError('Specify at least one data type: --sleep, --recovery, --workout, --cycle, --profile, --body', ExitCode.GENERAL_ERROR);
       }
 
       const date = options.date || getWhoopDay();
