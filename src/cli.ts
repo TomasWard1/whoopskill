@@ -3,14 +3,18 @@ import { login, logout, status as authStatus, refresh as authRefresh } from './a
 import { fetchData } from './api/client.js';
 import { getWhoopDay, validateISODate, getDaysAgo } from './utils/date.js';
 import { handleError, WhoopError, ExitCode } from './utils/errors.js';
-import { formatPretty, formatSummary, formatSummaryColor } from './utils/format.js';
+import { formatSummary, formatSummaryColor } from './utils/format.js';
 import { analyzeTrends, generateInsights, formatTrends, formatInsights } from './utils/analysis.js';
-import type { DataType, WhoopData } from './types/whoop.js';
+import { output, resolveFormat } from './utils/output.js';
+import type { OutputFormat } from './utils/output.js';
+import type { DataType } from './types/whoop.js';
 
 export const program = new Command();
 
-function output(data: WhoopData, pretty: boolean): void {
-  console.log(pretty ? formatPretty(data) : JSON.stringify(data, null, 2));
+function getFormat(options: { format?: string; pretty?: boolean }): OutputFormat {
+  if (options.pretty) return 'pretty';
+  if (options.format === 'json' || options.format === 'pretty') return options.format;
+  return 'auto';
 }
 
 program
@@ -54,7 +58,8 @@ function addDataCommand(name: string, description: string, dataType: DataType): 
     .option('-e, --end <date>', 'End date for range query')
     .option('-l, --limit <number>', 'Max results per page', '25')
     .option('-a, --all', 'Fetch all pages')
-    .option('-p, --pretty', 'Human-readable output')
+    .option('-f, --format <format>', 'Output format: json, pretty, auto (default: auto)', 'auto')
+    .option('-p, --pretty', 'Shorthand for --format pretty')
     .action(async (options) => {
       try {
         const date = options.date || getWhoopDay();
@@ -75,7 +80,7 @@ function addDataCommand(name: string, description: string, dataType: DataType): 
           end: options.end ? options.end + 'T23:59:59.999Z' : undefined,
         });
 
-        output(result, options.pretty);
+        output(result, getFormat(options));
       } catch (error) {
         handleError(error);
       }
@@ -112,7 +117,8 @@ program
   .command('trends')
   .description('Show trends over time (7/14/30 days)')
   .option('-n, --days <number>', 'Number of days to analyze', '7')
-  .option('--json', 'Output raw JSON instead of formatted text')
+  .option('-f, --format <format>', 'Output format: json, pretty, auto (default: auto)', 'auto')
+  .option('--json', 'Shorthand for --format json')
   .action(async (options) => {
     try {
       const days = parseInt(options.days, 10);
@@ -130,8 +136,9 @@ program
         import('./api/client.js').then(m => m.getCycle(params, true)),
       ]);
 
+      const fmt = options.json ? 'json' : resolveFormat(options.format || 'auto');
       const trends = analyzeTrends(recovery, sleep, cycle, days);
-      console.log(formatTrends(trends, !options.json));
+      console.log(formatTrends(trends, fmt === 'pretty'));
     } catch (error) {
       handleError(error);
     }
@@ -141,7 +148,8 @@ program
   .command('insights')
   .description('AI-style health insights and recommendations')
   .option('-d, --date <date>', 'Date in ISO format (YYYY-MM-DD)')
-  .option('--json', 'Output raw JSON instead of formatted text')
+  .option('-f, --format <format>', 'Output format: json, pretty, auto (default: auto)', 'auto')
+  .option('--json', 'Shorthand for --format json')
   .action(async (options) => {
     try {
       const date = options.date || getWhoopDay();
@@ -159,8 +167,9 @@ program
         import('./api/client.js').then(m => m.getWorkout({ start: date + 'T00:00:00.000Z', end: date + 'T23:59:59.999Z' }, true)),
       ]);
 
+      const fmt = options.json ? 'json' : resolveFormat(options.format || 'auto');
       const insights = generateInsights(recovery, sleep, cycle, workout);
-      console.log(formatInsights(insights, !options.json));
+      console.log(formatInsights(insights, fmt === 'pretty'));
     } catch (error) {
       handleError(error);
     }
@@ -172,7 +181,8 @@ program
   .option('-d, --date <date>', 'Date in ISO format (YYYY-MM-DD)')
   .option('-l, --limit <number>', 'Max results per page', '25')
   .option('-a, --all', 'Fetch all pages')
-  .option('-p, --pretty', 'Human-readable output')
+  .option('-f, --format <format>', 'Output format: json, pretty, auto (default: auto)', 'auto')
+  .option('-p, --pretty', 'Shorthand for --format pretty')
   .option('--sleep', 'Include sleep data')
   .option('--recovery', 'Include recovery data')
   .option('--workout', 'Include workout data')
@@ -203,7 +213,7 @@ program
         all: options.all,
       });
 
-      output(result, options.pretty);
+      output(result, getFormat(options));
     } catch (error) {
       handleError(error);
     }
