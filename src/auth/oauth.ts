@@ -45,10 +45,10 @@ export async function login(): Promise<void> {
   authUrl.searchParams.set('scope', SCOPES);
   authUrl.searchParams.set('state', state);
 
-  console.log('Opening browser for authorization...');
-  console.log('\nIf browser does not open, visit this URL:\n');
-  console.log(authUrl.toString());
-  console.log('');
+  console.error('Opening browser for authorization...');
+  console.error('\nIf browser does not open, visit this URL:\n');
+  console.error(authUrl.toString());
+  console.error('');
 
   await open(authUrl.toString()).catch(() => {});
 
@@ -87,27 +87,27 @@ export async function login(): Promise<void> {
 
   const tokens = (await tokenResponse.json()) as OAuthTokenResponse;
   saveTokens(tokens);
-  console.log('Authentication successful');
+  console.log(JSON.stringify({ success: true, message: 'Authentication successful' }));
 }
 
 export function logout(): void {
   clearTokens();
-  console.log('Logged out');
+  console.log(JSON.stringify({ success: true, message: 'Logged out' }));
 }
 
 export function status(): void {
   const tokenStatus = getTokenStatus();
   const tokens = loadTokens();
-  
+
   if (!tokenStatus.authenticated) {
     console.log(JSON.stringify({ authenticated: false, message: 'Not logged in. Run: whoop-cli auth login' }, null, 2));
-    return;
+    process.exit(ExitCode.AUTH_ERROR);
   }
 
   const now = Math.floor(Date.now() / 1000);
   const expiresIn = tokenStatus.expires_at! - now;
   const needsRefresh = isTokenExpired(tokens!);
-  
+
   console.log(JSON.stringify({
     authenticated: true,
     expires_at: tokenStatus.expires_at,
