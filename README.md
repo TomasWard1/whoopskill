@@ -15,7 +15,10 @@ npm install -g whoop-cli
 ## Quick Start
 
 ```bash
-# JSON output (default, agent-friendly)
+# Single-call health check (flat JSON, perfect for agents)
+whoop-cli check
+
+# Today's recovery data
 whoop-cli recovery
 
 # One-liner health snapshot
@@ -80,30 +83,40 @@ whoop-cli workout -s 2026-01-01 -e 2026-03-01 -a
 whoop-cli workout -l 50
 ```
 
+### Health Check (Agent Recommended)
+
+```bash
+whoop-cli check              # Auth + today's metrics in one flat JSON
+whoop-cli check -d 2026-03-01
+```
+
+Returns: `{ok, checked_at, auth.needs_refresh, date, recovery_score, hrv_rmssd_milli, resting_heart_rate, sleep_performance, sleep_hours, strain, calories, workout_count}`
+
 ### Analysis Commands
 
 ```bash
 whoop-cli summary            # One-liner health snapshot
 whoop-cli summary --color    # Color-coded with status indicators
-whoop-cli trends             # 7-day trends (also: --days 14, --days 30)
-whoop-cli trends --json      # Raw JSON trends data
+whoop-cli trends             # 7-day trends
+whoop-cli trends --days 30   # Any period 1-90 days
+whoop-cli trends --json      # Force JSON output
 whoop-cli insights           # Health recommendations
-whoop-cli insights --json    # Raw JSON insights
+whoop-cli insights --json    # Force JSON output
 ```
 
 ### Multi-Type Fetch
 
 ```bash
 whoop-cli multi --sleep --recovery --body
-whoop-cli multi --sleep --workout -a -p
+whoop-cli multi --sleep --workout -s 2026-01-01 -e 2026-03-01 -a
 ```
 
 ### Auth
 
 ```bash
 whoop-cli auth login    # OAuth flow (opens browser)
-whoop-cli auth status   # Check token status (JSON)
-whoop-cli auth refresh  # Refresh access token
+whoop-cli auth status   # JSON status, exit code 2 if not authenticated
+whoop-cli auth refresh  # Proactive token refresh (for cron jobs)
 whoop-cli auth logout   # Clear tokens
 ```
 
@@ -116,19 +129,23 @@ whoop-cli auth logout   # Clear tokens
 | `-e, --end <date>` | End date for range query |
 | `-l, --limit <n>` | Max results per page (default: 25) |
 | `-a, --all` | Fetch all pages |
-| `-p, --pretty` | Human-readable output |
+| `-f, --format <fmt>` | Output format: `json`, `pretty`, `auto` (default: auto) |
+| `-p, --pretty` | Shorthand for `--format pretty` |
 
 ## Output
 
-JSON to stdout by default. Designed for piping and programmatic consumption.
+**TTY-aware:** Auto-detects whether output is piped or interactive.
 
-```json
-{
-  "date": "2026-01-05",
-  "fetched_at": "2026-01-05T12:00:00.000Z",
-  "recovery": [{ "score": { "recovery_score": 52, "hrv_rmssd_milli": 38.9 }}],
-  "sleep": [{ "score": { "sleep_performance_percentage": 40 }}]
-}
+- **Piped** (agent/script): JSON to stdout. Errors as `{"error":"...","code":2}` to stdout.
+- **Interactive** (terminal): Human-readable text. Errors as plain text to stderr.
+
+```bash
+# Agent gets JSON automatically
+whoop-cli recovery | jq '.recovery[0].score.recovery_score'
+
+# Force format explicitly
+whoop-cli recovery --format json
+whoop-cli recovery --format pretty
 ```
 
 ## Exit Codes
