@@ -4,7 +4,8 @@
   "description": "Agent-first CLI for the WHOOP API",
   "type": "module",
   "bin": {
-    "whoop-cli": "./dist/index.js"
+    "whoop-cli": "./dist/index.js",
+    "whoop": "./dist/index.js"
   },
   "main": "./dist/index.js",
   "scripts": {
