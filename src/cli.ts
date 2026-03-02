@@ -240,13 +240,19 @@ program
   .command('check')
   .description('Quick health check: auth + today\'s key metrics in one call')
   .option('-d, --date <date>', 'Date in ISO format (YYYY-MM-DD)')
+  .option('-f, --format <format>', 'Output format: json, pretty, auto (default: auto)', 'auto')
   .action(async (options) => {
     try {
       const tokenStatus = getTokenStatus();
       const tokens = loadTokens();
+      const tty = resolveFormat(options.format || 'auto') === 'pretty';
 
       if (!tokenStatus.authenticated || !tokens) {
-        console.log(JSON.stringify({ ok: false, error: 'Not authenticated', code: ExitCode.AUTH_ERROR }));
+        if (tty) {
+          console.error('Not authenticated. Run: whoop auth login');
+        } else {
+          console.log(JSON.stringify({ ok: false, error: 'Not authenticated', code: ExitCode.AUTH_ERROR }));
+        }
         process.exit(ExitCode.AUTH_ERROR);
       }
 
@@ -257,14 +263,18 @@ program
       }
 
       const result = await fetchData(['recovery', 'sleep', 'cycle', 'workout'], date, { limit: 25 });
-      const summary = extractSummary(result);
 
-      console.log(JSON.stringify({
-        ok: true,
-        checked_at: nowISO(),
-        auth: { needs_refresh: needsRefresh },
-        ...summary,
-      }));
+      if (tty) {
+        console.log(formatSummaryColor(result));
+      } else {
+        const summary = extractSummary(result);
+        console.log(JSON.stringify({
+          ok: true,
+          checked_at: nowISO(),
+          auth: { needs_refresh: needsRefresh },
+          ...summary,
+        }));
+      }
     } catch (error) {
       handleError(error);
     }
