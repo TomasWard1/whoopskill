@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { WhoopError, ExitCode, handleError } from '../errors.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { WhoopError, ExitCode, handleError, formatErrorJSON } from '../errors.js';
 
 describe('WhoopError', () => {
   it('has correct name and properties', () => {
@@ -32,44 +32,122 @@ describe('ExitCode', () => {
   });
 });
 
-describe('handleError', () => {
-  it('exits with WhoopError code', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
-
+describe('formatErrorJSON', () => {
+  it('formats WhoopError with status code', () => {
     const err = new WhoopError('auth failed', ExitCode.AUTH_ERROR, 401);
-    handleError(err);
+    const json = formatErrorJSON(err);
+    expect(json).toEqual({
+      error: 'auth failed',
+      code: ExitCode.AUTH_ERROR,
+      status: 401,
+    });
+  });
 
-    expect(mockError).toHaveBeenCalledWith('Error: auth failed (401)');
+  it('formats WhoopError without status code', () => {
+    const err = new WhoopError('bad input', ExitCode.GENERAL_ERROR);
+    const json = formatErrorJSON(err);
+    expect(json).toEqual({
+      error: 'bad input',
+      code: ExitCode.GENERAL_ERROR,
+    });
+    expect(json).not.toHaveProperty('status');
+  });
+
+  it('formats network errors', () => {
+    const err = new Error('fetch failed');
+    const json = formatErrorJSON(err);
+    expect(json).toEqual({
+      error: 'Network connection failed',
+      code: ExitCode.NETWORK_ERROR,
+    });
+  });
+
+  it('formats ECONNREFUSED as network error', () => {
+    const err = new Error('ECONNREFUSED');
+    const json = formatErrorJSON(err);
+    expect(json.error).toBe('Network connection failed');
+    expect(json.code).toBe(ExitCode.NETWORK_ERROR);
+  });
+
+  it('formats generic Error', () => {
+    const err = new Error('something broke');
+    const json = formatErrorJSON(err);
+    expect(json).toEqual({
+      error: 'something broke',
+      code: ExitCode.GENERAL_ERROR,
+    });
+  });
+
+  it('formats non-Error values', () => {
+    const json = formatErrorJSON('something weird');
+    expect(json).toEqual({
+      error: 'Unknown error occurred',
+      code: ExitCode.GENERAL_ERROR,
+    });
+  });
+});
+
+describe('handleError', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockExit: any;
+  let mockStderr: ReturnType<typeof vi.spyOn>;
+  let mockStdout: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
+    mockStderr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockStdout = vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    mockExit.mockRestore();
+    mockStderr.mockRestore();
+    mockStdout.mockRestore();
+  });
+
+  it('outputs plain text to stderr when TTY', () => {
+    const err = new WhoopError('auth failed', ExitCode.AUTH_ERROR, 401);
+    handleError(err, true);
+
+    expect(mockStderr).toHaveBeenCalledWith('Error: auth failed (401)');
+    expect(mockStdout).not.toHaveBeenCalled();
     expect(mockExit).toHaveBeenCalledWith(ExitCode.AUTH_ERROR);
-
-    mockExit.mockRestore();
-    mockError.mockRestore();
   });
 
-  it('exits with NETWORK_ERROR for fetch failures', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it('outputs JSON to stdout when piped (no TTY)', () => {
+    const err = new WhoopError('auth failed', ExitCode.AUTH_ERROR, 401);
+    handleError(err, false);
 
-    handleError(new Error('fetch failed'));
-
-    expect(mockError).toHaveBeenCalledWith('Error: Network connection failed');
-    expect(mockExit).toHaveBeenCalledWith(ExitCode.NETWORK_ERROR);
-
-    mockExit.mockRestore();
-    mockError.mockRestore();
+    const output = JSON.parse(mockStdout.mock.calls[0][0] as string);
+    expect(output).toEqual({
+      error: 'auth failed',
+      code: ExitCode.AUTH_ERROR,
+      status: 401,
+    });
+    expect(mockStderr).not.toHaveBeenCalled();
+    expect(mockExit).toHaveBeenCalledWith(ExitCode.AUTH_ERROR);
   });
 
-  it('exits with GENERAL_ERROR for unknown errors', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it('outputs JSON for network errors when piped', () => {
+    handleError(new Error('fetch failed'), false);
 
-    handleError('something weird');
+    const output = JSON.parse(mockStdout.mock.calls[0][0] as string);
+    expect(output.error).toBe('Network connection failed');
+    expect(output.code).toBe(ExitCode.NETWORK_ERROR);
+  });
 
-    expect(mockError).toHaveBeenCalledWith('Error: Unknown error occurred');
+  it('outputs plain text for unknown errors when TTY', () => {
+    handleError('something weird', true);
+
+    expect(mockStderr).toHaveBeenCalledWith('Error: Unknown error occurred');
     expect(mockExit).toHaveBeenCalledWith(ExitCode.GENERAL_ERROR);
+  });
 
-    mockExit.mockRestore();
-    mockError.mockRestore();
+  it('outputs JSON for unknown errors when piped', () => {
+    handleError('something weird', false);
+
+    const output = JSON.parse(mockStdout.mock.calls[0][0] as string);
+    expect(output.error).toBe('Unknown error occurred');
+    expect(output.code).toBe(ExitCode.GENERAL_ERROR);
   });
 });

@@ -1,7 +1,8 @@
 import { Command } from 'commander';
 import { login, logout, status as authStatus, refresh as authRefresh } from './auth/oauth.js';
+import { getTokenStatus, isTokenExpired, loadTokens } from './auth/tokens.js';
 import { fetchData } from './api/client.js';
-import { getWhoopDay, validateISODate, getDaysAgo } from './utils/date.js';
+import { getWhoopDay, validateISODate, getDaysAgo, nowISO } from './utils/date.js';
 import { handleError, WhoopError, ExitCode } from './utils/errors.js';
 import { formatSummary, formatSummaryColor, extractSummary } from './utils/format.js';
 import { analyzeTrends, generateInsights, formatTrends, formatInsights } from './utils/analysis.js';
@@ -121,15 +122,15 @@ program
 
 program
   .command('trends')
-  .description('Show trends over time (7/14/30 days)')
-  .option('-n, --days <number>', 'Number of days to analyze', '7')
+  .description('Show trends over time (default: 7 days, max: 90)')
+  .option('-n, --days <number>', 'Number of days to analyze (1-90)', '7')
   .option('-f, --format <format>', 'Output format: json, pretty, auto (default: auto)', 'auto')
   .option('--json', 'Shorthand for --format json')
   .action(async (options) => {
     try {
       const days = parseInt(options.days, 10);
-      if (![7, 14, 30].includes(days)) {
-        throw new WhoopError('Days must be 7, 14, or 30', ExitCode.GENERAL_ERROR);
+      if (isNaN(days) || days < 1 || days > 90) {
+        throw new WhoopError('Days must be between 1 and 90', ExitCode.GENERAL_ERROR);
       }
 
       const endDate = getWhoopDay();
@@ -185,6 +186,8 @@ program
   .command('multi')
   .description('Fetch multiple data types at once')
   .option('-d, --date <date>', 'Date in ISO format (YYYY-MM-DD)')
+  .option('-s, --start <date>', 'Start date for range query')
+  .option('-e, --end <date>', 'End date for range query')
   .option('-l, --limit <number>', 'Max results per page', '25')
   .option('-a, --all', 'Fetch all pages')
   .option('-f, --format <format>', 'Output format: json, pretty, auto (default: auto)', 'auto')
@@ -213,13 +216,55 @@ program
       if (options.date && !validateISODate(options.date)) {
         throw new WhoopError('Invalid date format. Use YYYY-MM-DD', ExitCode.GENERAL_ERROR);
       }
+      if (options.start && !validateISODate(options.start)) {
+        throw new WhoopError('Invalid start date format. Use YYYY-MM-DD', ExitCode.GENERAL_ERROR);
+      }
+      if (options.end && !validateISODate(options.end)) {
+        throw new WhoopError('Invalid end date format. Use YYYY-MM-DD', ExitCode.GENERAL_ERROR);
+      }
 
       const result = await fetchData(types, date, {
         limit: parseInt(options.limit, 10),
         all: options.all,
+        start: options.start ? options.start + 'T00:00:00.000Z' : undefined,
+        end: options.end ? options.end + 'T23:59:59.999Z' : undefined,
       });
 
       output(result, getFormat(options));
+    } catch (error) {
+      handleError(error);
+    }
+  });
+
+program
+  .command('check')
+  .description('Quick health check: auth + today\'s key metrics in one call')
+  .option('-d, --date <date>', 'Date in ISO format (YYYY-MM-DD)')
+  .action(async (options) => {
+    try {
+      const tokenStatus = getTokenStatus();
+      const tokens = loadTokens();
+
+      if (!tokenStatus.authenticated || !tokens) {
+        console.log(JSON.stringify({ ok: false, error: 'Not authenticated', code: ExitCode.AUTH_ERROR }));
+        process.exit(ExitCode.AUTH_ERROR);
+      }
+
+      const needsRefresh = isTokenExpired(tokens);
+      const date = options.date || getWhoopDay();
+      if (options.date && !validateISODate(options.date)) {
+        throw new WhoopError('Invalid date format. Use YYYY-MM-DD', ExitCode.GENERAL_ERROR);
+      }
+
+      const result = await fetchData(['recovery', 'sleep', 'cycle', 'workout'], date, { limit: 25 });
+      const summary = extractSummary(result);
+
+      console.log(JSON.stringify({
+        ok: true,
+        checked_at: nowISO(),
+        auth: { needs_refresh: needsRefresh },
+        ...summary,
+      }));
     } catch (error) {
       handleError(error);
     }
