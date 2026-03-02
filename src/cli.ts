@@ -3,7 +3,7 @@ import { login, logout, status as authStatus, refresh as authRefresh } from './a
 import { fetchData } from './api/client.js';
 import { getWhoopDay, validateISODate, getDaysAgo } from './utils/date.js';
 import { handleError, WhoopError, ExitCode } from './utils/errors.js';
-import { formatSummary, formatSummaryColor } from './utils/format.js';
+import { formatSummary, formatSummaryColor, extractSummary } from './utils/format.js';
 import { analyzeTrends, generateInsights, formatTrends, formatInsights } from './utils/analysis.js';
 import { output, resolveFormat } from './utils/output.js';
 import type { OutputFormat } from './utils/output.js';
@@ -99,6 +99,7 @@ program
   .description('One-liner health snapshot')
   .option('-d, --date <date>', 'Date in ISO format (YYYY-MM-DD)')
   .option('-c, --color', 'Color-coded output with status indicators')
+  .option('-f, --format <format>', 'Output format: json, pretty, auto (default: auto)', 'auto')
   .action(async (options) => {
     try {
       const date = options.date || getWhoopDay();
@@ -107,7 +108,12 @@ program
       }
 
       const result = await fetchData(['recovery', 'sleep', 'cycle', 'workout'], date, { limit: 25 });
-      console.log(options.color ? formatSummaryColor(result) : formatSummary(result));
+      const fmt = resolveFormat(options.format || 'auto');
+      if (fmt === 'json') {
+        console.log(JSON.stringify(extractSummary(result), null, 2));
+      } else {
+        console.log(options.color ? formatSummaryColor(result) : formatSummary(result));
+      }
     } catch (error) {
       handleError(error);
     }
