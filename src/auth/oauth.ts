@@ -2,27 +2,13 @@ import { randomBytes } from 'node:crypto';
 import { createInterface } from 'node:readline';
 import open from 'open';
 import { saveTokens, clearTokens, getTokenStatus, getValidTokens, isTokenExpired, loadTokens } from './tokens.js';
+import { getCredentials as getStoredCredentials, saveConfig } from './config.js';
 import { WhoopError, ExitCode } from '../utils/errors.js';
 import type { OAuthTokenResponse } from '../types/whoop.js';
 
 const WHOOP_AUTH_URL = 'https://api.prod.whoop.com/oauth/oauth2/auth';
 const WHOOP_TOKEN_URL = 'https://api.prod.whoop.com/oauth/oauth2/token';
 const SCOPES = 'read:profile read:body_measurement read:workout read:recovery read:sleep read:cycles offline';
-
-function getCredentials(): { clientId: string; clientSecret: string; redirectUri: string } {
-  const clientId = process.env.WHOOP_CLIENT_ID;
-  const clientSecret = process.env.WHOOP_CLIENT_SECRET;
-  const redirectUri = process.env.WHOOP_REDIRECT_URI;
-
-  if (!clientId || !clientSecret || !redirectUri) {
-    throw new WhoopError(
-      'Missing WHOOP_CLIENT_ID, WHOOP_CLIENT_SECRET, or WHOOP_REDIRECT_URI in environment',
-      ExitCode.AUTH_ERROR
-    );
-  }
-
-  return { clientId, clientSecret, redirectUri };
-}
 
 function prompt(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -34,8 +20,31 @@ function prompt(question: string): Promise<string> {
   });
 }
 
+async function resolveCredentials(): Promise<{ clientId: string; clientSecret: string; redirectUri: string }> {
+  const stored = getStoredCredentials();
+  if (stored) return stored;
+
+  // Interactive onboarding — prompt for credentials
+  console.error('No WHOOP credentials found. Let\'s set them up.\n');
+  console.error('Get your credentials at: https://developer.whoop.com\n');
+
+  const clientId = await prompt('Client ID: ');
+  const clientSecret = await prompt('Client Secret: ');
+  let redirectUri = await prompt('Redirect URI (enter for http://localhost:8787/callback): ');
+  if (!redirectUri) redirectUri = 'http://localhost:8787/callback';
+
+  if (!clientId || !clientSecret) {
+    throw new WhoopError('Client ID and Client Secret are required', ExitCode.AUTH_ERROR);
+  }
+
+  saveConfig({ client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri });
+  console.error('\nCredentials saved to ~/.whoop-cli/config.json\n');
+
+  return { clientId, clientSecret, redirectUri };
+}
+
 export async function login(): Promise<void> {
-  const { clientId, clientSecret, redirectUri } = getCredentials();
+  const { clientId, clientSecret, redirectUri } = await resolveCredentials();
   const state = randomBytes(16).toString('hex');
 
   const authUrl = new URL(WHOOP_AUTH_URL);

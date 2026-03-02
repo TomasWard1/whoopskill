@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync } from 'n
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { TokenData, OAuthTokenResponse } from '../types/whoop.js';
+import { getCredentials } from './config.js';
 import { WhoopError, ExitCode } from '../utils/errors.js';
 
 const CONFIG_DIR = join(homedir(), '.whoop-cli');
@@ -56,12 +57,13 @@ export function isTokenExpired(tokens: TokenData): boolean {
 }
 
 export async function refreshAccessToken(tokens: TokenData): Promise<TokenData> {
-  const clientId = process.env.WHOOP_CLIENT_ID;
-  const clientSecret = process.env.WHOOP_CLIENT_SECRET;
+  const creds = getCredentials();
 
-  if (!clientId || !clientSecret) {
-    throw new WhoopError('Missing WHOOP_CLIENT_ID or WHOOP_CLIENT_SECRET', ExitCode.AUTH_ERROR);
+  if (!creds) {
+    throw new WhoopError('No credentials found. Run: whoop auth login', ExitCode.AUTH_ERROR);
   }
+
+  const { clientId, clientSecret } = creds;
 
   const response = await fetch('https://api.prod.whoop.com/oauth/oauth2/token', {
     method: 'POST',
