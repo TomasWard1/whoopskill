@@ -1,0 +1,31 @@
+name: Promote staging to main
+
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check for existing PR
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          existing=$(gh pr list --base main --head staging --json number --jq '.[0].number // empty')
+          echo "pr_number=$existing" >> "$GITHUB_OUTPUT"
+      - name: Create PR to main
+        if: steps.check.outputs.pr_number == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head staging \
+            --title "chore: promote staging to main" \
+            --body "Automated PR from staging after CI passed."
