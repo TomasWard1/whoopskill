@@ -1,7 +1,8 @@
 import { Command } from 'commander';
 import { login, logout, status as authStatus, refresh as authRefresh } from './auth/oauth.js';
+import { getTokenStatus, isTokenExpired, loadTokens } from './auth/tokens.js';
 import { fetchData } from './api/client.js';
-import { getWhoopDay, validateISODate, getDaysAgo } from './utils/date.js';
+import { getWhoopDay, validateISODate, getDaysAgo, nowISO } from './utils/date.js';
 import { handleError, WhoopError, ExitCode } from './utils/errors.js';
 import { formatSummary, formatSummaryColor, extractSummary } from './utils/format.js';
 import { analyzeTrends, generateInsights, formatTrends, formatInsights } from './utils/analysis.js';
@@ -230,6 +231,40 @@ program
       });
 
       output(result, getFormat(options));
+    } catch (error) {
+      handleError(error);
+    }
+  });
+
+program
+  .command('check')
+  .description('Quick health check: auth + today\'s key metrics in one call')
+  .option('-d, --date <date>', 'Date in ISO format (YYYY-MM-DD)')
+  .action(async (options) => {
+    try {
+      const tokenStatus = getTokenStatus();
+      const tokens = loadTokens();
+
+      if (!tokenStatus.authenticated || !tokens) {
+        console.log(JSON.stringify({ ok: false, error: 'Not authenticated', code: ExitCode.AUTH_ERROR }));
+        process.exit(ExitCode.AUTH_ERROR);
+      }
+
+      const needsRefresh = isTokenExpired(tokens);
+      const date = options.date || getWhoopDay();
+      if (options.date && !validateISODate(options.date)) {
+        throw new WhoopError('Invalid date format. Use YYYY-MM-DD', ExitCode.GENERAL_ERROR);
+      }
+
+      const result = await fetchData(['recovery', 'sleep', 'cycle', 'workout'], date, { limit: 25 });
+      const summary = extractSummary(result);
+
+      console.log(JSON.stringify({
+        ok: true,
+        checked_at: nowISO(),
+        auth: { needs_refresh: needsRefresh },
+        ...summary,
+      }));
     } catch (error) {
       handleError(error);
     }
