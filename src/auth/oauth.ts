@@ -32,24 +32,27 @@ function promptSecret(question: string): Promise<string> {
     stdin.setEncoding('utf8');
 
     let input = '';
-    const onData = (char: string) => {
-      if (char === '\n' || char === '\r') {
-        stdin.setRawMode(false);
-        stdin.pause();
-        stdin.removeListener('data', onData);
-        process.stderr.write('\n');
-        resolve(input.trim());
-      } else if (char === '\u0003') {
-        stdin.setRawMode(false);
-        process.exit(130);
-      } else if (char === '\u007f' || char === '\b') {
-        if (input.length > 0) {
-          input = input.slice(0, -1);
-          process.stderr.write('\b \b');
+    const onData = (data: string) => {
+      for (const char of data) {
+        if (char === '\n' || char === '\r') {
+          stdin.setRawMode(false);
+          stdin.pause();
+          stdin.removeListener('data', onData);
+          process.stderr.write('\n');
+          resolve(input.trim());
+          return;
+        } else if (char === '\u0003') {
+          stdin.setRawMode(false);
+          process.exit(130);
+        } else if (char === '\u007f' || char === '\b') {
+          if (input.length > 0) {
+            input = input.slice(0, -1);
+            process.stderr.write('\b \b');
+          }
+        } else {
+          input += char;
+          process.stderr.write('*');
         }
-      } else {
-        input += char;
-        process.stderr.write('*');
       }
     };
     stdin.on('data', onData);
@@ -141,20 +144,36 @@ export async function login(): Promise<void> {
 
   const tokens = (await tokenResponse.json()) as OAuthTokenResponse;
   saveTokens(tokens);
-  console.log(JSON.stringify({ success: true, message: 'Authentication successful' }));
+  const tty = !!process.stdout.isTTY;
+  if (tty) {
+    console.error('\n  ✓ You\'re in! WHOOP data is now available.\n');
+    console.error('  Try: whoop check');
+  } else {
+    console.log(JSON.stringify({ success: true, message: 'Authentication successful' }));
+  }
 }
 
 export function logout(): void {
   clearTokens();
-  console.log(JSON.stringify({ success: true, message: 'Logged out' }));
+  const tty = !!process.stdout.isTTY;
+  if (tty) {
+    console.error('Logged out. Tokens cleared.');
+  } else {
+    console.log(JSON.stringify({ success: true, message: 'Logged out' }));
+  }
 }
 
 export function status(): void {
   const tokenStatus = getTokenStatus();
   const tokens = loadTokens();
+  const tty = !!process.stdout.isTTY;
 
   if (!tokenStatus.authenticated) {
-    console.log(JSON.stringify({ authenticated: false, message: 'Not logged in. Run: whoop-cli auth login' }, null, 2));
+    if (tty) {
+      console.error('Not logged in. Run: whoop auth login');
+    } else {
+      console.log(JSON.stringify({ authenticated: false, message: 'Not logged in. Run: whoop-cli auth login' }));
+    }
     process.exit(ExitCode.AUTH_ERROR);
   }
 
@@ -162,13 +181,19 @@ export function status(): void {
   const expiresIn = tokenStatus.expires_at! - now;
   const needsRefresh = isTokenExpired(tokens!);
 
-  console.log(JSON.stringify({
-    authenticated: true,
-    expires_at: tokenStatus.expires_at,
-    expires_in_seconds: expiresIn,
-    expires_in_human: expiresIn > 0 ? `${Math.floor(expiresIn / 60)} minutes` : 'EXPIRED',
-    needs_refresh: needsRefresh,
-  }, null, 2));
+  if (tty) {
+    const timeLeft = expiresIn > 0 ? `${Math.floor(expiresIn / 60)} min` : 'EXPIRED';
+    const status = needsRefresh ? '⚠ Token needs refresh' : '✓ Authenticated';
+    console.error(`${status} (expires in ${timeLeft})`);
+  } else {
+    console.log(JSON.stringify({
+      authenticated: true,
+      expires_at: tokenStatus.expires_at,
+      expires_in_seconds: expiresIn,
+      expires_in_human: expiresIn > 0 ? `${Math.floor(expiresIn / 60)} minutes` : 'EXPIRED',
+      needs_refresh: needsRefresh,
+    }));
+  }
 }
 
 /**
