@@ -20,6 +20,7 @@ export async function findAvailablePort(startPort: number = 3000): Promise<numbe
 
 export function startCallbackServer(port: number): Promise<CallbackResult> {
   return new Promise((resolve, reject) => {
+    // eslint-disable-next-line prefer-const
     let server: Server;
 
     const timeout = setTimeout(() => {
