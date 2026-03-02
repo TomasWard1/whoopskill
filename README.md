@@ -1,10 +1,8 @@
 # whoop-cli
 
-Agent-first CLI for the WHOOP API v2.
+Your WHOOP data, from the terminal. Built for humans and agents.
 
-Built for programmatic access — structured JSON output, proper exit codes, and pagination support. Works great as a tool for AI agents, cron jobs, and scripts.
-
-> Based on [whoopskill](https://github.com/koala73/whoopskill) by [@koala73](https://github.com/koala73). Thank you for the solid foundation.
+> Based on [whoopskill](https://github.com/koala73/whoopskill) by [@koala73](https://github.com/koala73).
 
 ## Install
 
@@ -12,172 +10,128 @@ Built for programmatic access — structured JSON output, proper exit codes, and
 npm install -g whoop-cli
 ```
 
-Both `whoop-cli` and `whoop` commands are available after install.
-
-### Agent Self-Install
-
-For AI agents that need to install and configure whoop-cli autonomously:
-
-```bash
-# Clone and build
-git clone https://github.com/TomasWard1/whoop-cli.git ~/tools/whoop-cli
-cd ~/tools/whoop-cli && npm install && npm run build
-
-# Create global wrapper (adjust node path as needed)
-NODE_BIN=$(dirname $(which node))
-cat > "$NODE_BIN/whoop-cli" << 'WRAPPER'
-#!/usr/bin/env node
-require('/path/to/whoop-cli/dist/index.js');
-WRAPPER
-chmod +x "$NODE_BIN/whoop-cli"
-
-# Set env vars (required)
-export WHOOP_CLIENT_ID=<client_id>
-export WHOOP_CLIENT_SECRET=<client_secret>
-export WHOOP_REDIRECT_URI=<redirect_uri>
-
-# Verify
-whoop-cli --version
-whoop-cli auth status
-```
-
-Tokens are stored in `~/.whoop-cli/tokens.json`. Auth must be completed by a human via `whoop-cli auth login` (OAuth browser flow). After initial auth, tokens auto-refresh — agents can use all commands without further human interaction.
-
-## Quick Start
-
-```bash
-# Single-call health check (flat JSON, perfect for agents)
-whoop-cli check
-
-# Today's recovery data
-whoop-cli recovery
-
-# One-liner health snapshot
-whoop-cli summary
-
-# Human-readable output
-whoop-cli recovery --pretty
-
-# Color-coded summary
-whoop-cli summary --color
-```
+Both `whoop` and `whoop-cli` work as commands.
 
 ## Setup
 
-1. Register a WHOOP application at [developer.whoop.com](https://developer.whoop.com)
-   - Apps with <10 users don't need WHOOP review (immediate use)
-
-2. Set environment variables:
 ```bash
-export WHOOP_CLIENT_ID=your_client_id
-export WHOOP_CLIENT_SECRET=your_client_secret
-export WHOOP_REDIRECT_URI=https://your-redirect-uri.com/callback
+whoop auth login
 ```
 
-Or create a `.env` file in your working directory.
+First time? The CLI walks you through it:
 
-3. Authenticate:
-```bash
-whoop-cli auth login
+```
+WHOOP CLI — First-time setup
+────────────────────────────
+
+1. Go to https://developer.whoop.com
+2. Create an application (apps with <10 users need no review)
+3. Set the Redirect URI to: http://localhost:8787/callback
+4. Copy your Client ID and Client Secret below
+
+Everything stays local in ~/.whoop-cli/config.json
+
+Client ID: ________
+Client Secret: ********
+
+✓ Credentials saved
 ```
 
-Tokens are stored in `~/.whoop-cli/tokens.json` and auto-refresh when expired.
+Then it opens your browser for OAuth. Authorize, paste the callback URL, done. Tokens auto-refresh after that — you won't need to log in again.
 
-## Commands
+## Usage
 
-### Data Commands
-
-Each data command supports `-d`, `-s`, `-e`, `-l`, `-a`, `-p` flags.
+### Quick check
 
 ```bash
-whoop-cli sleep              # Today's sleep data
-whoop-cli recovery           # Today's recovery
-whoop-cli workout            # Today's workouts
-whoop-cli cycle              # Today's cycle
-whoop-cli profile            # User profile
-whoop-cli body               # Body measurements
+whoop check              # Today's health snapshot
+whoop summary --color    # Color-coded with status indicators
+whoop insights           # Personalized recommendations
 ```
 
-### Date Range & Pagination
+In a terminal, `check` shows a human-readable summary:
 
-```bash
-# Specific date
-whoop-cli workout -d 2026-01-15
-
-# Date range
-whoop-cli workout -s 2026-01-01 -e 2026-03-01
-
-# All pages (full history)
-whoop-cli workout -s 2026-01-01 -e 2026-03-01 -a
-
-# Custom page size
-whoop-cli workout -l 50
+```
+📅 2026-03-02
+🟢 Recovery: 75% | HRV: 106ms | RHR: 37bpm
+🟢 Sleep: 76% | 7.5h | Efficiency: 92%
+🟡 Strain: 6.9 (optimal: ~14) | 1649 cal
+🏋️ Workouts: 1 | Strength Training
 ```
 
-### Health Check (Agent Recommended)
+Piped or in a script, it outputs flat JSON automatically.
+
+### Data commands
 
 ```bash
-whoop-cli check              # Auth + today's metrics in one flat JSON
-whoop-cli check -d 2026-03-01
+whoop recovery           # Today's recovery
+whoop sleep              # Today's sleep
+whoop workout            # Today's workouts
+whoop cycle              # Today's cycle
+whoop profile            # User profile
+whoop body               # Body measurements
 ```
 
-Returns: `{ok, checked_at, auth.needs_refresh, date, recovery_score, hrv_rmssd_milli, resting_heart_rate, sleep_performance, sleep_hours, strain, calories, workout_count}`
-
-### Analysis Commands
+### Date ranges
 
 ```bash
-whoop-cli summary            # One-liner health snapshot
-whoop-cli summary --color    # Color-coded with status indicators
-whoop-cli trends             # 7-day trends
-whoop-cli trends --days 30   # Any period 1-90 days
-whoop-cli trends --json      # Force JSON output
-whoop-cli insights           # Health recommendations
-whoop-cli insights --json    # Force JSON output
+whoop workout -d 2026-01-15                       # Specific date
+whoop workout -s 2026-01-01 -e 2026-03-01         # Date range
+whoop workout -s 2026-01-01 -e 2026-03-01 -a      # All pages
 ```
 
-### Multi-Type Fetch
+### Trends & insights
 
 ```bash
-whoop-cli multi --sleep --recovery --body
-whoop-cli multi --sleep --workout -s 2026-01-01 -e 2026-03-01 -a
+whoop trends                # 7-day trends
+whoop trends --days 30      # Any period (1-90 days)
+whoop insights              # Health recommendations
+```
+
+### Multi-type fetch
+
+```bash
+whoop multi --sleep --recovery --body
+whoop multi --sleep --workout -s 2026-01-01 -e 2026-03-01 -a
 ```
 
 ### Auth
 
 ```bash
-whoop-cli auth login    # OAuth flow (opens browser)
-whoop-cli auth status   # JSON status, exit code 2 if not authenticated
-whoop-cli auth refresh  # Proactive token refresh (for cron jobs)
-whoop-cli auth logout   # Clear tokens
+whoop auth login        # OAuth flow (opens browser)
+whoop auth status       # Check auth state
+whoop auth refresh      # Force token refresh
+whoop auth logout       # Clear tokens
+```
+
+## Output
+
+**TTY-aware** — the CLI detects how you're using it:
+
+| Context | Output |
+|---------|--------|
+| Terminal (human) | Pretty text, color-coded |
+| Piped / scripted (agent) | Structured JSON to stdout |
+
+Force a specific format:
+
+```bash
+whoop recovery --format json      # Force JSON
+whoop recovery --format pretty    # Force pretty
+whoop recovery --pretty           # Shorthand
 ```
 
 ## Options
 
 | Flag | Description |
 |------|-------------|
-| `-d, --date <date>` | Date in ISO format (YYYY-MM-DD) |
-| `-s, --start <date>` | Start date for range query |
-| `-e, --end <date>` | End date for range query |
-| `-l, --limit <n>` | Max results per page (default: 25) |
+| `-d, --date <date>` | Date (YYYY-MM-DD) |
+| `-s, --start <date>` | Start date for range |
+| `-e, --end <date>` | End date for range |
+| `-l, --limit <n>` | Results per page (default: 25) |
 | `-a, --all` | Fetch all pages |
-| `-f, --format <fmt>` | Output format: `json`, `pretty`, `auto` (default: auto) |
+| `-f, --format <fmt>` | `json`, `pretty`, or `auto` (default: auto) |
 | `-p, --pretty` | Shorthand for `--format pretty` |
-
-## Output
-
-**TTY-aware:** Auto-detects whether output is piped or interactive.
-
-- **Piped** (agent/script): JSON to stdout. Errors as `{"error":"...","code":2}` to stdout.
-- **Interactive** (terminal): Human-readable text. Errors as plain text to stderr.
-
-```bash
-# Agent gets JSON automatically
-whoop-cli recovery | jq '.recovery[0].score.recovery_score'
-
-# Force format explicitly
-whoop-cli recovery --format json
-whoop-cli recovery --format pretty
-```
 
 ## Exit Codes
 
@@ -185,34 +139,52 @@ whoop-cli recovery --format pretty
 |------|---------|
 | 0 | Success |
 | 1 | General error |
-| 2 | Authentication error |
+| 2 | Auth error (not logged in, bad credentials) |
 | 3 | Rate limit exceeded |
 | 4 | Network error |
 
-## Token Management
+## For Agents
 
-For cron/automation, tokens need periodic refresh. See `examples/monitor/` for:
-- Shell script with refresh + health check
-- systemd timer/service units
-- Cron examples
+Agents get JSON automatically when output is piped. Recommended starting point:
 
-If refresh token expires, re-authenticate with `whoop-cli auth login`.
+```bash
+whoop check    # → {"ok":true,"recovery_score":75,"hrv_rmssd_milli":106,...}
+```
 
-## Data Types
+### Agent self-install
 
-| Type | Description |
-|------|-------------|
-| `profile` | User info (name, email) |
-| `body` | Body measurements (height, weight, max HR) |
-| `sleep` | Sleep records with stages, efficiency, respiratory rate |
-| `recovery` | Recovery score, HRV, RHR, SpO2, skin temp |
-| `workout` | Workouts with strain, HR zones, calories, distance |
-| `cycle` | Daily physiological cycle (strain, calories) |
+```bash
+git clone https://github.com/TomasWard1/whoop-cli.git ~/tools/whoop-cli
+cd ~/tools/whoop-cli && npm install && npm run build
 
-## Requirements
+# Create global wrapper
+NODE_BIN=$(dirname $(which node))
+printf '#!/usr/bin/env node\nrequire("%s/dist/index.js");\n' "$HOME/tools/whoop-cli" > "$NODE_BIN/whoop-cli"
+chmod +x "$NODE_BIN/whoop-cli"
 
-- Node.js 22+
-- WHOOP membership with API access
+# Set credentials via env vars (skip interactive prompt)
+export WHOOP_CLIENT_ID=<client_id>
+export WHOOP_CLIENT_SECRET=<client_secret>
+
+# Verify
+whoop-cli auth status
+```
+
+A human must complete `whoop auth login` once (OAuth browser flow). After that, tokens auto-refresh and agents can use all commands without human interaction.
+
+### Credential priority
+
+1. Environment variables (`WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`)
+2. Config file (`~/.whoop-cli/config.json`)
+3. Interactive prompt (humans only)
+
+## Storage
+
+```
+~/.whoop-cli/
+├── config.json    # Client credentials (600 perms)
+└── tokens.json    # OAuth tokens (600 perms, auto-refresh)
+```
 
 ## Development
 
@@ -220,9 +192,15 @@ If refresh token expires, re-authenticate with `whoop-cli auth login`.
 git clone https://github.com/TomasWard1/whoop-cli.git
 cd whoop-cli
 npm install
-npm run dev      # Run with tsx
-npm run build    # Compile TypeScript
+npm test           # 65 tests
+npm run dev        # Run with tsx
+npm run build      # Compile TypeScript
 ```
+
+## Requirements
+
+- Node.js 22+
+- WHOOP membership with API access
 
 ## License
 
