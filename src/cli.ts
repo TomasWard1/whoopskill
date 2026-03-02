@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { login, logout, status as authStatus, refresh as authRefresh } from './auth/oauth.js';
-import { fetchData, fetchAllTypes } from './api/client.js';
+import { fetchData } from './api/client.js';
 import { getWhoopDay, validateISODate, getDaysAgo } from './utils/date.js';
 import { handleError, WhoopError, ExitCode } from './utils/errors.js';
 import { formatPretty, formatSummary, formatSummaryColor } from './utils/format.js';
