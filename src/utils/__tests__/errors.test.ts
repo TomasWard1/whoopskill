@@ -88,8 +88,7 @@ describe('formatErrorJSON', () => {
 });
 
 describe('handleError', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockExit: any;
+  let mockExit: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   let mockStderr: ReturnType<typeof vi.spyOn>;
   let mockStdout: ReturnType<typeof vi.spyOn>;
 

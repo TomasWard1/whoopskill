@@ -12,6 +12,37 @@ Built for programmatic access — structured JSON output, proper exit codes, and
 npm install -g whoop-cli
 ```
 
+Both `whoop-cli` and `whoop` commands are available after install.
+
+### Agent Self-Install
+
+For AI agents that need to install and configure whoop-cli autonomously:
+
+```bash
+# Clone and build
+git clone https://github.com/TomasWard1/whoop-cli.git ~/tools/whoop-cli
+cd ~/tools/whoop-cli && npm install && npm run build
+
+# Create global wrapper (adjust node path as needed)
+NODE_BIN=$(dirname $(which node))
+cat > "$NODE_BIN/whoop-cli" << 'WRAPPER'
+#!/usr/bin/env node
+require('/path/to/whoop-cli/dist/index.js');
+WRAPPER
+chmod +x "$NODE_BIN/whoop-cli"
+
+# Set env vars (required)
+export WHOOP_CLIENT_ID=<client_id>
+export WHOOP_CLIENT_SECRET=<client_secret>
+export WHOOP_REDIRECT_URI=<redirect_uri>
+
+# Verify
+whoop-cli --version
+whoop-cli auth status
+```
+
+Tokens are stored in `~/.whoop-cli/tokens.json`. Auth must be completed by a human via `whoop-cli auth login` (OAuth browser flow). After initial auth, tokens auto-refresh — agents can use all commands without further human interaction.
+
 ## Quick Start
 
 ```bash
