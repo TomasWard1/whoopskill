@@ -14,9 +14,9 @@ function output(data: WhoopData, pretty: boolean): void {
 }
 
 program
-  .name('whoopskill')
-  .description('CLI for fetching WHOOP health data')
-  .version('1.1.0');
+  .name('whoop-cli')
+  .description('Agent-first CLI for the WHOOP API')
+  .version('2.0.0');
 
 program
   .command('auth')

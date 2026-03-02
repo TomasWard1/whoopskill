@@ -1,9 +1,9 @@
 [Unit]
-Description=whoopskill token refresh + lightweight fetch
+Description=whoop-cli token refresh + lightweight fetch
 
 [Service]
 Type=oneshot
 # Ensure your WHOOP_* env vars are set via ~/.config/environment.d/*.conf
 # or via an EnvironmentFile= line below.
-# EnvironmentFile=%h/.config/whoopskill.env
+# EnvironmentFile=%h/.config/whoop-cli.env
 ExecStart=%h/.local/bin/whoop-refresh-monitor.sh
