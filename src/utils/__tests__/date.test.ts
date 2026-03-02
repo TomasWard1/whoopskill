@@ -20,7 +20,6 @@ describe('validateISODate', () => {
   });
 
   it('does not catch date overflow (known limitation)', () => {
-    // JS Date wraps 2026-02-30 to 2026-03-02, so isNaN returns false
     expect(validateISODate('2026-02-30')).toBe(true);
   });
 
@@ -31,25 +30,22 @@ describe('validateISODate', () => {
 });
 
 describe('formatDate', () => {
-  it('formats a Date as YYYY-MM-DD', () => {
+  it('formats a Date as YYYY-MM-DD in UTC', () => {
     expect(formatDate(new Date('2026-01-15T12:00:00Z'))).toBe('2026-01-15');
   });
 });
 
 describe('getDateRange', () => {
-  it('returns a 24-hour window', () => {
+  it('returns full calendar day in UTC', () => {
     const range = getDateRange('2026-01-15');
-    const start = new Date(range.start);
-    const end = new Date(range.end);
-    const diffHours = (end.getTime() - start.getTime()) / 3600000;
-    expect(diffHours).toBe(24);
+    expect(range.start).toBe('2026-01-15T00:00:00.000Z');
+    expect(range.end).toBe('2026-01-15T23:59:59.999Z');
   });
 
-  it('start hour is 4am local', () => {
-    const range = getDateRange('2026-01-15');
-    const start = new Date(range.start);
-    expect(start.getHours()).toBe(4);
-    expect(start.getMinutes()).toBe(0);
+  it('works for any date string', () => {
+    const range = getDateRange('2026-03-02');
+    expect(range.start).toBe('2026-03-02T00:00:00.000Z');
+    expect(range.end).toBe('2026-03-02T23:59:59.999Z');
   });
 });
 
@@ -62,18 +58,18 @@ describe('getWhoopDay', () => {
     vi.useRealTimers();
   });
 
-  it('returns previous day before 4am', () => {
-    vi.setSystemTime(new Date('2026-01-15T03:00:00'));
-    expect(getWhoopDay()).toBe('2026-01-14');
-  });
-
-  it('returns current day at/after 4am', () => {
-    vi.setSystemTime(new Date('2026-01-15T04:00:00'));
+  it('returns local calendar date', () => {
+    vi.setSystemTime(new Date('2026-01-15T14:00:00'));
     expect(getWhoopDay()).toBe('2026-01-15');
   });
 
-  it('returns current day in the afternoon', () => {
-    vi.setSystemTime(new Date('2026-01-15T14:00:00'));
+  it('returns local date even late at night', () => {
+    vi.setSystemTime(new Date('2026-01-15T23:30:00'));
+    expect(getWhoopDay()).toBe('2026-01-15');
+  });
+
+  it('returns local date early morning', () => {
+    vi.setSystemTime(new Date('2026-01-15T03:00:00'));
     expect(getWhoopDay()).toBe('2026-01-15');
   });
 });
