@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { createInterface } from 'node:readline';
 import open from 'open';
 import { saveTokens, clearTokens, getTokenStatus, getValidTokens, isTokenExpired, loadTokens } from './tokens.js';
+import { getCredentials as getStoredCredentials, saveConfig } from './config.js';
 import { WhoopError, ExitCode } from '../utils/errors.js';
 import type { OAuthTokenResponse } from '../types/whoop.js';
 
@@ -9,23 +10,10 @@ const WHOOP_AUTH_URL = 'https://api.prod.whoop.com/oauth/oauth2/auth';
 const WHOOP_TOKEN_URL = 'https://api.prod.whoop.com/oauth/oauth2/token';
 const SCOPES = 'read:profile read:body_measurement read:workout read:recovery read:sleep read:cycles offline';
 
-function getCredentials(): { clientId: string; clientSecret: string; redirectUri: string } {
-  const clientId = process.env.WHOOP_CLIENT_ID;
-  const clientSecret = process.env.WHOOP_CLIENT_SECRET;
-  const redirectUri = process.env.WHOOP_REDIRECT_URI;
-
-  if (!clientId || !clientSecret || !redirectUri) {
-    throw new WhoopError(
-      'Missing WHOOP_CLIENT_ID, WHOOP_CLIENT_SECRET, or WHOOP_REDIRECT_URI in environment',
-      ExitCode.AUTH_ERROR
-    );
-  }
-
-  return { clientId, clientSecret, redirectUri };
-}
+const DEFAULT_REDIRECT_URI = 'http://localhost:8787/callback';
 
 function prompt(question: string): Promise<string> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const rl = createInterface({ input: process.stdin, output: process.stderr });
   return new Promise((resolve) => {
     rl.question(question, (answer) => {
       rl.close();
@@ -34,8 +22,77 @@ function prompt(question: string): Promise<string> {
   });
 }
 
+function promptSecret(question: string): Promise<string> {
+  return new Promise((resolve) => {
+    process.stderr.write(question);
+    const stdin = process.stdin;
+    if (!stdin.isTTY) return resolve('');
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding('utf8');
+
+    let input = '';
+    const onData = (data: string) => {
+      for (const char of data) {
+        if (char === '\n' || char === '\r') {
+          stdin.setRawMode(false);
+          stdin.pause();
+          stdin.removeListener('data', onData);
+          process.stderr.write('\n');
+          resolve(input.trim());
+          return;
+        } else if (char === '\u0003') {
+          stdin.setRawMode(false);
+          process.exit(130);
+        } else if (char === '\u007f' || char === '\b') {
+          if (input.length > 0) {
+            input = input.slice(0, -1);
+            process.stderr.write('\b \b');
+          }
+        } else {
+          input += char;
+          process.stderr.write('*');
+        }
+      }
+    };
+    stdin.on('data', onData);
+  });
+}
+
+async function resolveCredentials(): Promise<{ clientId: string; clientSecret: string; redirectUri: string }> {
+  const stored = getStoredCredentials();
+  if (stored) return stored;
+
+  // Interactive onboarding
+  console.error('');
+  console.error('  WHOOP CLI — First-time setup');
+  console.error('  ────────────────────────────');
+  console.error('');
+  console.error('  1. Go to https://developer.whoop.com');
+  console.error('  2. Create an application (apps with <10 users need no review)');
+  console.error('  3. Set the Redirect URI to: ' + DEFAULT_REDIRECT_URI);
+  console.error('  4. Copy your Client ID and Client Secret below');
+  console.error('');
+  console.error('  Everything stays local in ~/.whoop-cli/config.json');
+  console.error('');
+
+  const clientId = await prompt('  Client ID: ');
+  const clientSecret = await promptSecret('  Client Secret: ');
+
+  if (!clientId || !clientSecret) {
+    throw new WhoopError('Client ID and Client Secret are required', ExitCode.AUTH_ERROR);
+  }
+
+  saveConfig({ client_id: clientId, client_secret: clientSecret, redirect_uri: DEFAULT_REDIRECT_URI });
+  console.error('');
+  console.error('  ✓ Credentials saved to ~/.whoop-cli/config.json');
+  console.error('');
+
+  return { clientId, clientSecret, redirectUri: DEFAULT_REDIRECT_URI };
+}
+
 export async function login(): Promise<void> {
-  const { clientId, clientSecret, redirectUri } = getCredentials();
+  const { clientId, clientSecret, redirectUri } = await resolveCredentials();
   const state = randomBytes(16).toString('hex');
 
   const authUrl = new URL(WHOOP_AUTH_URL);
@@ -87,20 +144,36 @@ export async function login(): Promise<void> {
 
   const tokens = (await tokenResponse.json()) as OAuthTokenResponse;
   saveTokens(tokens);
-  console.log(JSON.stringify({ success: true, message: 'Authentication successful' }));
+  const tty = !!process.stdout.isTTY;
+  if (tty) {
+    console.error('\n  ✓ You\'re in! WHOOP data is now available.\n');
+    console.error('  Try: whoop check');
+  } else {
+    console.log(JSON.stringify({ success: true, message: 'Authentication successful' }));
+  }
 }
 
 export function logout(): void {
   clearTokens();
-  console.log(JSON.stringify({ success: true, message: 'Logged out' }));
+  const tty = !!process.stdout.isTTY;
+  if (tty) {
+    console.error('Logged out. Tokens cleared.');
+  } else {
+    console.log(JSON.stringify({ success: true, message: 'Logged out' }));
+  }
 }
 
 export function status(): void {
   const tokenStatus = getTokenStatus();
   const tokens = loadTokens();
+  const tty = !!process.stdout.isTTY;
 
   if (!tokenStatus.authenticated) {
-    console.log(JSON.stringify({ authenticated: false, message: 'Not logged in. Run: whoop-cli auth login' }, null, 2));
+    if (tty) {
+      console.error('Not logged in. Run: whoop auth login');
+    } else {
+      console.log(JSON.stringify({ authenticated: false, message: 'Not logged in. Run: whoop-cli auth login' }));
+    }
     process.exit(ExitCode.AUTH_ERROR);
   }
 
@@ -108,13 +181,19 @@ export function status(): void {
   const expiresIn = tokenStatus.expires_at! - now;
   const needsRefresh = isTokenExpired(tokens!);
 
-  console.log(JSON.stringify({
-    authenticated: true,
-    expires_at: tokenStatus.expires_at,
-    expires_in_seconds: expiresIn,
-    expires_in_human: expiresIn > 0 ? `${Math.floor(expiresIn / 60)} minutes` : 'EXPIRED',
-    needs_refresh: needsRefresh,
-  }, null, 2));
+  if (tty) {
+    const timeLeft = expiresIn > 0 ? `${Math.floor(expiresIn / 60)} min` : 'EXPIRED';
+    const status = needsRefresh ? '⚠ Token needs refresh' : '✓ Authenticated';
+    console.error(`${status} (expires in ${timeLeft})`);
+  } else {
+    console.log(JSON.stringify({
+      authenticated: true,
+      expires_at: tokenStatus.expires_at,
+      expires_in_seconds: expiresIn,
+      expires_in_human: expiresIn > 0 ? `${Math.floor(expiresIn / 60)} minutes` : 'EXPIRED',
+      needs_refresh: needsRefresh,
+    }));
+  }
 }
 
 /**

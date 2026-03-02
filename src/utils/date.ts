@@ -1,30 +1,22 @@
-const WHOOP_DAY_START_HOUR = 4;
-
-export function getWhoopDay(date?: string): string {
-  const d = date ? new Date(date) : new Date();
-
-  if (d.getHours() < WHOOP_DAY_START_HOUR) {
-    d.setDate(d.getDate() - 1);
-  }
-
-  return formatDate(d);
+export function getWhoopDay(): string {
+  return formatDateLocal(new Date());
 }
 
 export function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
+function formatDateLocal(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export function getDateRange(date: string): { start: string; end: string } {
-  const d = new Date(date);
-  const start = new Date(d);
-  start.setHours(WHOOP_DAY_START_HOUR, 0, 0, 0);
-
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-
   return {
-    start: start.toISOString(),
-    end: end.toISOString(),
+    start: `${date}T00:00:00.000Z`,
+    end: `${date}T23:59:59.999Z`,
   };
 }
 
@@ -43,5 +35,5 @@ export function nowISO(): string {
 export function getDaysAgo(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() - days);
-  return formatDate(d);
+  return formatDateLocal(d);
 }
