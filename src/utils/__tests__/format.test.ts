@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatSummary, formatSummaryColor, formatPretty } from '../format.js';
+import { formatSummary, formatSummaryColor, formatPretty, extractSummary } from '../format.js';
 import type { WhoopData } from '../../types/whoop.js';
 
 function makeData(overrides: Partial<WhoopData> = {}): WhoopData {
@@ -100,5 +100,40 @@ describe('formatPretty', () => {
     expect(result).toContain('Sleep: 88%');
     expect(result).toContain('Running');
     expect(result).toContain('Day strain: 12.5');
+  });
+});
+
+describe('extractSummary', () => {
+  it('returns date for empty data', () => {
+    const result = extractSummary(makeData());
+    expect(result).toEqual({ date: '2026-01-15' });
+  });
+
+  it('extracts flat summary from full data', () => {
+    const result = extractSummary(makeData({
+      recovery: mockRecovery as any,
+      sleep: mockSleep as any,
+      cycle: mockCycle as any,
+      workout: mockWorkout as any,
+    }));
+    expect(result.date).toBe('2026-01-15');
+    expect(result.recovery_score).toBe(72);
+    expect(result.hrv_rmssd_milli).toBe(45.2);
+    expect(result.resting_heart_rate).toBe(58);
+    expect(result.sleep_performance).toBe(88);
+    expect(result.sleep_hours).toBe(8);
+    expect(result.sleep_efficiency).toBe(93);
+    expect(result.strain).toBe(12.5);
+    expect(result.workout_count).toBe(1);
+  });
+
+  it('result is JSON-serializable', () => {
+    const result = extractSummary(makeData({
+      recovery: mockRecovery as any,
+      sleep: mockSleep as any,
+    }));
+    const parsed = JSON.parse(JSON.stringify(result));
+    expect(parsed.recovery_score).toBe(72);
+    expect(parsed.sleep_performance).toBe(88);
   });
 });
