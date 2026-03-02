@@ -43,6 +43,53 @@ export function formatPretty(data: WhoopData): string {
   return lines.join('\n');
 }
 
+export interface SummaryData {
+  date: string;
+  recovery_score?: number;
+  hrv_rmssd_milli?: number;
+  resting_heart_rate?: number;
+  spo2_percentage?: number;
+  skin_temp_celsius?: number;
+  sleep_performance?: number;
+  sleep_hours?: number;
+  sleep_efficiency?: number;
+  strain?: number;
+  calories?: number;
+  workout_count?: number;
+}
+
+export function extractSummary(data: WhoopData): SummaryData {
+  const summary: SummaryData = { date: data.date };
+
+  if (data.recovery?.length) {
+    const r = data.recovery[0].score;
+    summary.recovery_score = r.recovery_score;
+    summary.hrv_rmssd_milli = Math.round(r.hrv_rmssd_milli * 10) / 10;
+    summary.resting_heart_rate = r.resting_heart_rate;
+    if (r.spo2_percentage) summary.spo2_percentage = r.spo2_percentage;
+    if (r.skin_temp_celsius) summary.skin_temp_celsius = Math.round(r.skin_temp_celsius * 10) / 10;
+  }
+
+  if (data.sleep?.length) {
+    const s = data.sleep[0].score;
+    summary.sleep_performance = s.sleep_performance_percentage;
+    summary.sleep_hours = Math.round((s.stage_summary.total_in_bed_time_milli / 3600000) * 10) / 10;
+    summary.sleep_efficiency = Math.round(s.sleep_efficiency_percentage);
+  }
+
+  if (data.cycle?.length) {
+    const c = data.cycle[0].score;
+    summary.strain = Math.round(c.strain * 10) / 10;
+    summary.calories = Math.round(c.kilojoule / 4.184);
+  }
+
+  if (data.workout?.length) {
+    summary.workout_count = data.workout.length;
+  }
+
+  return summary;
+}
+
 export function formatSummary(data: WhoopData): string {
   const parts: string[] = [];
 
