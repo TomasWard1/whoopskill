@@ -1,5 +1,35 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getWhoopDay, formatDate, getDateRange, validateISODate, getDaysAgo } from '../date.js';
+import { getWhoopDay, formatDate, getDateRange, validateISODate, getDaysAgo, getLocalOffset, toLocalStart, toLocalEnd } from '../date.js';
+
+describe('getLocalOffset', () => {
+  it('returns a valid ±HH:MM string', () => {
+    const offset = getLocalOffset();
+    expect(offset).toMatch(/^[+-]\d{2}:\d{2}$/);
+  });
+
+  it('returns correct offset for system timezone', () => {
+    const offset = getLocalOffset();
+    const offsetMin = new Date().getTimezoneOffset();
+    const sign = offsetMin <= 0 ? '+' : '-';
+    const abs = Math.abs(offsetMin);
+    const expected = `${sign}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`;
+    expect(offset).toBe(expected);
+  });
+});
+
+describe('toLocalStart / toLocalEnd', () => {
+  it('appends local offset to start timestamp', () => {
+    const result = toLocalStart('2026-03-03');
+    const offset = getLocalOffset();
+    expect(result).toBe(`2026-03-03T00:00:00.000${offset}`);
+  });
+
+  it('appends local offset to end timestamp', () => {
+    const result = toLocalEnd('2026-03-03');
+    const offset = getLocalOffset();
+    expect(result).toBe(`2026-03-03T23:59:59.999${offset}`);
+  });
+});
 
 describe('validateISODate', () => {
   it('accepts valid YYYY-MM-DD dates', () => {
@@ -36,16 +66,17 @@ describe('formatDate', () => {
 });
 
 describe('getDateRange', () => {
-  it('returns full calendar day in UTC', () => {
+  it('returns full calendar day with local timezone offset', () => {
     const range = getDateRange('2026-01-15');
-    expect(range.start).toBe('2026-01-15T00:00:00.000Z');
-    expect(range.end).toBe('2026-01-15T23:59:59.999Z');
+    const offset = getLocalOffset();
+    expect(range.start).toBe(`2026-01-15T00:00:00.000${offset}`);
+    expect(range.end).toBe(`2026-01-15T23:59:59.999${offset}`);
   });
 
-  it('works for any date string', () => {
+  it('uses local offset not Z', () => {
     const range = getDateRange('2026-03-02');
-    expect(range.start).toBe('2026-03-02T00:00:00.000Z');
-    expect(range.end).toBe('2026-03-02T23:59:59.999Z');
+    expect(range.start).not.toContain('Z');
+    expect(range.end).not.toContain('Z');
   });
 });
 
