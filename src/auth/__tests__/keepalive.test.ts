@@ -1,26 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { execFileSync } from 'node:child_process';
-
-vi.mock('node:child_process');
-vi.mock('../tokens.js', () => ({
-  loadTokens: vi.fn(),
-}));
-
-import { loadTokens } from '../tokens.js';
-
-let keepaliveEnable: typeof import('../keepalive.js').keepaliveEnable;
-let keepaliveDisable: typeof import('../keepalive.js').keepaliveDisable;
-let keepaliveStatus: typeof import('../keepalive.js').keepaliveStatus;
-let keepalive: typeof import('../keepalive.js').keepalive;
-
-const mockExecFileSync = vi.mocked(execFileSync);
-const mockLoadTokens = vi.mocked(loadTokens);
 
 beforeEach(async () => {
   vi.resetModules();
   vi.clearAllMocks();
 
-  // Re-mock after resetModules
   vi.mock('node:child_process');
   vi.mock('../tokens.js', () => ({
     loadTokens: vi.fn(),
@@ -34,12 +17,6 @@ beforeEach(async () => {
     token_type: 'bearer',
     scope: 'offline',
   });
-
-  const mod = await import('../keepalive.js');
-  keepaliveEnable = mod.keepaliveEnable;
-  keepaliveDisable = mod.keepaliveDisable;
-  keepaliveStatus = mod.keepaliveStatus;
-  keepalive = mod.keepalive;
 });
 
 describe('keepaliveEnable', () => {
