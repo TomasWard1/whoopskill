@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { login, logout, status as authStatus, refresh as authRefresh } from './auth/oauth.js';
+import { keepalive } from './auth/keepalive.js';
 import { getTokenStatus, isTokenExpired, loadTokens } from './auth/tokens.js';
 import { fetchData } from './api/client.js';
 import { getWhoopDay, validateISODate, getDaysAgo, nowISO, toLocalStart, toLocalEnd } from './utils/date.js';
@@ -26,8 +27,9 @@ program
 program
   .command('auth')
   .description('Manage authentication')
-  .argument('<action>', 'login, logout, status, or refresh')
-  .action(async (action: string) => {
+  .argument('<action>', 'login, logout, status, refresh, or keepalive')
+  .argument('[flag]', 'For keepalive: --status, --disable')
+  .action(async (action: string, flag?: string) => {
     try {
       switch (action) {
         case 'login':
@@ -42,8 +44,11 @@ program
         case 'refresh':
           await authRefresh();
           break;
+        case 'keepalive':
+          keepalive(flag);
+          break;
         default:
-          throw new WhoopError(`Unknown auth action: ${action}. Use: login, logout, status, or refresh`, ExitCode.GENERAL_ERROR);
+          throw new WhoopError(`Unknown auth action: ${action}. Use: login, logout, status, refresh, or keepalive`, ExitCode.GENERAL_ERROR);
       }
     } catch (error) {
       handleError(error);

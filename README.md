@@ -99,10 +99,13 @@ whoop multi --sleep --workout -s 2026-01-01 -e 2026-03-01 -a
 ### Auth
 
 ```bash
-whoop auth login        # OAuth flow (opens browser)
-whoop auth status       # Check auth state
-whoop auth refresh      # Force token refresh
-whoop auth logout       # Clear tokens
+whoop auth login             # OAuth flow (opens browser)
+whoop auth status            # Check auth state
+whoop auth refresh           # Force token refresh
+whoop auth keepalive         # Install cron to auto-refresh tokens
+whoop auth keepalive --status   # Check if keepalive is active
+whoop auth keepalive --disable  # Remove keepalive cron
+whoop auth logout            # Clear tokens
 ```
 
 ## Output
@@ -179,7 +182,13 @@ chmod 600 ~/.whoop-cli/config.json
 whoop auth login
 ```
 
-A human must complete `whoop auth login` once (OAuth requires browser authorization). After that, tokens auto-refresh and agents can use all commands without human interaction.
+A human must complete `whoop auth login` once (OAuth requires browser authorization). After that, enable keepalive to ensure tokens stay fresh:
+
+```bash
+whoop auth keepalive     # Installs cron job (refreshes every 45 min)
+```
+
+WHOOP access tokens expire every hour and use [refresh token rotation](https://developer.whoop.com/docs/developing/oauth/) — each refresh invalidates the previous token. Without regular refresh, both tokens expire and require re-login. The keepalive cron prevents this automatically.
 
 ### Credential resolution
 
