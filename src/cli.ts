@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { login, logout, status as authStatus, refresh as authRefresh } from './auth/oauth.js';
 import { getTokenStatus, isTokenExpired, loadTokens } from './auth/tokens.js';
 import { fetchData } from './api/client.js';
-import { getWhoopDay, validateISODate, getDaysAgo, nowISO } from './utils/date.js';
+import { getWhoopDay, validateISODate, getDaysAgo, nowISO, toLocalStart, toLocalEnd } from './utils/date.js';
 import { handleError, WhoopError, ExitCode } from './utils/errors.js';
 import { formatSummary, formatSummaryColor, extractSummary } from './utils/format.js';
 import { analyzeTrends, generateInsights, formatTrends, formatInsights } from './utils/analysis.js';
@@ -77,8 +77,8 @@ function addDataCommand(name: string, description: string, dataType: DataType): 
         const result = await fetchData([dataType], date, {
           limit: parseInt(options.limit, 10),
           all: options.all,
-          start: options.start ? options.start + 'T00:00:00.000Z' : undefined,
-          end: options.end ? options.end + 'T23:59:59.999Z' : undefined,
+          start: options.start ? toLocalStart(options.start) : undefined,
+          end: options.end ? toLocalEnd(options.end) : undefined,
         });
 
         output(result, getFormat(options));
@@ -135,7 +135,7 @@ program
 
       const endDate = getWhoopDay();
       const startDate = getDaysAgo(days);
-      const params = { start: startDate + 'T00:00:00.000Z', end: endDate + 'T23:59:59.999Z' };
+      const params = { start: toLocalStart(startDate), end: toLocalEnd(endDate) };
 
       const [recovery, sleep, cycle] = await Promise.all([
         import('./api/client.js').then(m => m.getRecovery(params, true)),
@@ -165,13 +165,13 @@ program
       }
 
       const startDate = getDaysAgo(7);
-      const params = { start: startDate + 'T00:00:00.000Z', end: date + 'T23:59:59.999Z' };
+      const params = { start: toLocalStart(startDate), end: toLocalEnd(date) };
 
       const [recovery, sleep, cycle, workout] = await Promise.all([
         import('./api/client.js').then(m => m.getRecovery(params, true)),
         import('./api/client.js').then(m => m.getSleep(params, true)),
         import('./api/client.js').then(m => m.getCycle(params, true)),
-        import('./api/client.js').then(m => m.getWorkout({ start: date + 'T00:00:00.000Z', end: date + 'T23:59:59.999Z' }, true)),
+        import('./api/client.js').then(m => m.getWorkout({ start: toLocalStart(date), end: toLocalEnd(date) }, true)),
       ]);
 
       const fmt = options.json ? 'json' : resolveFormat(options.format || 'auto');
@@ -226,8 +226,8 @@ program
       const result = await fetchData(types, date, {
         limit: parseInt(options.limit, 10),
         all: options.all,
-        start: options.start ? options.start + 'T00:00:00.000Z' : undefined,
-        end: options.end ? options.end + 'T23:59:59.999Z' : undefined,
+        start: options.start ? toLocalStart(options.start) : undefined,
+        end: options.end ? toLocalEnd(options.end) : undefined,
       });
 
       output(result, getFormat(options));
