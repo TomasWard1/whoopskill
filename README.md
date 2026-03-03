@@ -7,10 +7,11 @@ Your WHOOP data, from the terminal. Built for humans and agents.
 ## Install
 
 ```bash
-npm install -g whoop-cli
+git clone https://github.com/TomasWard1/whoop-cli.git
+cd whoop-cli && npm install && npm run build && npm link
 ```
 
-Both `whoop` and `whoop-cli` work as commands.
+Both `whoop` and `whoop-cli` work as commands. Requires Node.js 22+.
 
 ## Setup
 
@@ -155,28 +156,35 @@ whoop check    # → {"ok":true,"recovery_score":75,"hrv_rmssd_milli":106,...}
 
 ```bash
 git clone https://github.com/TomasWard1/whoop-cli.git ~/tools/whoop-cli
-cd ~/tools/whoop-cli && npm install && npm run build
-
-# Create global wrapper
-NODE_BIN=$(dirname $(which node))
-printf '#!/usr/bin/env node\nrequire("%s/dist/index.js");\n' "$HOME/tools/whoop-cli" > "$NODE_BIN/whoop-cli"
-chmod +x "$NODE_BIN/whoop-cli"
-
-# Set credentials via env vars (skip interactive prompt)
-export WHOOP_CLIENT_ID=<client_id>
-export WHOOP_CLIENT_SECRET=<client_secret>
-
-# Verify
-whoop-cli auth status
+cd ~/tools/whoop-cli && npm install && npm run build && npm link
 ```
 
-A human must complete `whoop auth login` once (OAuth browser flow). After that, tokens auto-refresh and agents can use all commands without human interaction.
+### Headless setup (servers / CI)
 
-### Credential priority
+On machines without a browser, pre-write the config and complete OAuth manually:
 
-1. Environment variables (`WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`)
-2. Config file (`~/.whoop-cli/config.json`)
-3. Interactive prompt (humans only)
+```bash
+# 1. Write credentials (skip interactive prompt)
+mkdir -p ~/.whoop-cli && chmod 700 ~/.whoop-cli
+cat > ~/.whoop-cli/config.json << 'EOF'
+{
+  "client_id": "<your_client_id>",
+  "client_secret": "<your_client_secret>",
+  "redirect_uri": "http://localhost:8787/callback"
+}
+EOF
+chmod 600 ~/.whoop-cli/config.json
+
+# 2. Log in — shows a URL, open it on any machine, paste callback URL back
+whoop auth login
+```
+
+A human must complete `whoop auth login` once (OAuth requires browser authorization). After that, tokens auto-refresh and agents can use all commands without human interaction.
+
+### Credential resolution
+
+1. Config file (`~/.whoop-cli/config.json`) — written by interactive setup or manually
+2. Environment variables (`WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`) — override config file
 
 ## Storage
 
@@ -196,11 +204,6 @@ npm test           # 65 tests
 npm run dev        # Run with tsx
 npm run build      # Compile TypeScript
 ```
-
-## Requirements
-
-- Node.js 22+
-- WHOOP membership with API access
 
 ## License
 
