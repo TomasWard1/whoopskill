@@ -32,10 +32,11 @@ describe('keepaliveEnable', () => {
     const { execFileSync } = await import('node:child_process');
     const exec = vi.mocked(execFileSync);
 
-    // which whoop
+    // which whoop + node bin dir
     exec.mockImplementation((cmd: string, args?: readonly string[]) => {
       if (cmd === 'crontab' && args?.[0] === '-l') return '';
       if (cmd === 'which') return '/usr/local/bin/whoop';
+      if (cmd === 'node') return '/usr/local/bin';
       if (cmd === 'crontab' && args?.[0] === '-') return '';
       return '';
     });
@@ -54,6 +55,11 @@ describe('keepaliveEnable', () => {
 
     // Should have called crontab - to set the new crontab
     expect(exec).toHaveBeenCalledWith('crontab', ['-'], expect.objectContaining({ input: expect.stringContaining('whoop-cli keepalive') }));
+
+    // Cron line should include PATH= to ensure node is found in non-interactive shells
+    const setCalls = exec.mock.calls.filter(([cmd, args]) => cmd === 'crontab' && (args as string[])?.[0] === '-');
+    const input = (setCalls[0][2] as { input: string }).input;
+    expect(input).toContain('PATH=/usr/local/bin:$PATH');
   });
 
   it('does not duplicate cron when already active', async () => {
