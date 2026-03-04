@@ -19,6 +19,11 @@ function getWhoopBin(): string {
   }
 }
 
+function getNodeBinDir(): string {
+  return execFileSync('node', ['-e', 'process.stdout.write(path.dirname(process.execPath))', '-r', 'path'],
+    { encoding: 'utf-8' }).trim();
+}
+
 function getCurrentCrontab(): string {
   try {
     return execFileSync('crontab', ['-l'], { encoding: 'utf-8' });
@@ -54,7 +59,8 @@ export function keepaliveEnable(): void {
   }
 
   const bin = getWhoopBin();
-  const cronLine = `*/45 * * * * ${bin} auth refresh >> ~/.whoop-cli/keepalive.log 2>&1 ${CRON_MARKER}`;
+  const nodeBinDir = getNodeBinDir();
+  const cronLine = `*/45 * * * * PATH=${nodeBinDir}:$PATH ${bin} auth refresh >> ~/.whoop-cli/keepalive.log 2>&1 ${CRON_MARKER}`;
   const newCrontab = crontab.trimEnd() + '\n' + cronLine + '\n';
 
   setCrontab(newCrontab);
