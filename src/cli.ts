@@ -22,13 +22,15 @@ function getFormat(options: { format?: string; pretty?: boolean }): OutputFormat
 program
   .name('whoop-cli')
   .description('Agent-first CLI for the WHOOP API')
-  .version('2.0.0');
+  .version('2.0.0')
+  .enablePositionalOptions();
 
 program
   .command('auth')
   .description('Manage authentication')
   .argument('<action>', 'login, logout, status, refresh, or keepalive')
   .argument('[flag]', 'For keepalive: --status, --disable')
+  .passThroughOptions()
   .action(async (action: string, flag?: string) => {
     try {
       switch (action) {
