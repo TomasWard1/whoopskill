@@ -7,8 +7,7 @@ Your WHOOP data, from the terminal. Built for humans and agents.
 ## Install
 
 ```bash
-git clone https://github.com/TomasWard1/whoop-cli.git
-cd whoop-cli && npm install && npm run build && npm link
+npm install -g @tomasward/whoop-cli
 ```
 
 Both `whoop` and `whoop-cli` work as commands. Requires Node.js 22+.
@@ -174,8 +173,7 @@ whoop awake && whoop check    # Only report if awake
 ### Agent self-install
 
 ```bash
-git clone https://github.com/TomasWard1/whoop-cli.git ~/tools/whoop-cli
-cd ~/tools/whoop-cli && npm install && npm run build && npm link
+npm install -g @tomasward/whoop-cli
 ```
 
 ### Headless setup (servers / CI)

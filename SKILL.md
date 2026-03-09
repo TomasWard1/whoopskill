@@ -1,89 +1,119 @@
 ---
 name: whoop-cli
-description: Agent-first WHOOP CLI — health metrics, insights, and trend analysis via structured JSON.
-homepage: https://github.com/TomasWard1/whoop-cli
-metadata: {"clawdis":{"emoji":"💪","requires":{"bins":["node"],"env":["WHOOP_CLIENT_ID","WHOOP_CLIENT_SECRET","WHOOP_REDIRECT_URI"]},"install":[{"id":"npm","kind":"npm","package":"whoop-cli","bins":["whoop-cli"],"label":"Install whoop-cli (npm)"}]}}
+description: Fetch and analyze WHOOP health data from the terminal. Use when the user mentions WHOOP, recovery score, HRV, heart rate variability, sleep performance, strain, workout data, health metrics, or wants to check their daily health snapshot. Outputs structured JSON when piped — ideal for agent workflows.
 ---
 
 # whoop-cli
 
-Agent-first CLI for WHOOP health data. All commands output JSON to stdout when piped, pretty text when interactive.
+CLI for WHOOP health data. All commands output JSON when piped, pretty text when interactive.
 
-Install: `npm install -g whoop-cli` | [GitHub](https://github.com/TomasWard1/whoop-cli)
+Both `whoop` and `whoop-cli` work as commands.
+
+## Install
+
+```bash
+npm install -g @tomasward/whoop-cli
+```
+
+Requires Node.js 22+.
+
+## Auth
+
+A human must complete OAuth once (requires browser). After that, tokens auto-refresh.
+
+```bash
+whoop auth login      # Opens browser for OAuth
+whoop auth status     # Check auth (exit code 2 = not authenticated)
+whoop auth refresh    # Force token refresh
+whoop auth logout     # Clear tokens
+whoop auth keepalive  # Install cron for auto-refresh (every 45 min)
+```
+
+### First-time setup
+
+The CLI prompts for WHOOP API credentials on first login:
+
+1. Go to https://developer.whoop.com
+2. Create an application (apps with <10 users need no review)
+3. Set Redirect URI to `http://localhost:8787/callback`
+4. Enter Client ID and Client Secret when prompted
+
+Credentials are stored in `~/.whoop-cli/config.json`. Env vars `WHOOP_CLIENT_ID` and `WHOOP_CLIENT_SECRET` override the config file.
+
+### Headless setup (servers / CI)
+
+```bash
+mkdir -p ~/.whoop-cli && chmod 700 ~/.whoop-cli
+cat > ~/.whoop-cli/config.json << 'EOF'
+{"client_id":"<id>","client_secret":"<secret>","redirect_uri":"http://localhost:8787/callback"}
+EOF
+chmod 600 ~/.whoop-cli/config.json
+whoop auth login       # Shows URL — open on any machine, paste callback back
+whoop auth keepalive   # Keep tokens fresh automatically
+```
 
 ## Agent quick start
 
 ```bash
-# Health check (one call, flat JSON)
-whoop-cli check
+# Single-call health snapshot (flat JSON)
+whoop check
 # → {"ok":true,"checked_at":"...","recovery_score":72,"hrv_rmssd_milli":45.2,"sleep_hours":7.1,"strain":8.3}
 
-# Auth pre-flight (exit code 2 = not authenticated)
-whoop-cli auth status
+# Auth pre-flight
+whoop auth status
 echo $?  # 0 = ok, 2 = needs login
-
-# Refresh tokens (for cron jobs)
-whoop-cli auth refresh
 ```
 
 ## Commands
 
 ### check — single-call health snapshot
 ```bash
-whoop-cli check                    # today's metrics as flat JSON
-whoop-cli check --date 2026-03-01  # specific date
+whoop check                    # today's metrics
+whoop check --date 2026-03-01  # specific date
 ```
-Returns: `{ok, checked_at, auth.needs_refresh, date, recovery_score, hrv_rmssd_milli, resting_heart_rate, sleep_performance, sleep_hours, sleep_efficiency, strain, calories, workout_count}`
+Returns: `{ok, checked_at, date, recovery_score, hrv_rmssd_milli, resting_heart_rate, sleep_performance, sleep_hours, sleep_efficiency, strain, calories, workout_count}`
 
-### summary — one-liner health status
+### summary — one-liner status
 ```bash
-whoop-cli summary                  # JSON when piped, text when interactive
-whoop-cli summary --color          # color-coded with status indicators
-whoop-cli summary --format json    # force JSON
+whoop summary                  # JSON when piped, text when interactive
+whoop summary --color          # color-coded with status indicators
+whoop summary --format json    # force JSON
 ```
 
 ### Data commands — sleep, recovery, workout, cycle, profile, body
 ```bash
-whoop-cli recovery                          # today's recovery
-whoop-cli sleep --date 2026-03-01           # specific date
-whoop-cli workout -s 2026-01-01 -e 2026-03-01 -a  # date range, all pages
-whoop-cli cycle --format json               # force JSON output
+whoop recovery                                          # today
+whoop sleep --date 2026-03-01                           # specific date
+whoop workout -s 2026-01-01 -e 2026-03-01 -a           # date range, all pages
+whoop cycle --format json                               # force JSON
 ```
 
 ### multi — multiple data types in one call
 ```bash
-whoop-cli multi --sleep --recovery --workout           # today
-whoop-cli multi --sleep --recovery -s 2026-01-01 -e 2026-03-01 -a  # date range
+whoop multi --sleep --recovery --workout                            # today
+whoop multi --sleep --recovery -s 2026-01-01 -e 2026-03-01 -a      # date range
 ```
 
-### trends — multi-day trend analysis
+### trends — multi-day analysis
 ```bash
-whoop-cli trends                    # 7-day trends
-whoop-cli trends --days 30          # 30-day trends (1-90 supported)
-whoop-cli trends --json             # force JSON
+whoop trends              # 7-day trends
+whoop trends --days 30    # 30-day trends (1-90)
+whoop trends --json       # force JSON
 ```
 
 ### insights — health recommendations
 ```bash
-whoop-cli insights                  # today's insights
-whoop-cli insights --date 2026-03-01 --json
-```
-
-### auth — authentication management
-```bash
-whoop-cli auth login    # OAuth flow (opens browser)
-whoop-cli auth status   # JSON status, exit code 2 if not authenticated
-whoop-cli auth refresh  # proactive token refresh (for cron)
-whoop-cli auth logout   # clear tokens
+whoop insights                            # today
+whoop insights --date 2026-03-01 --json   # specific date, JSON
 ```
 
 ## Output behavior
 
 - **Piped** (no TTY): JSON to stdout. Errors as `{"error":"...","code":2}` to stdout.
 - **Interactive** (TTY): human-readable text. Errors as plain text to stderr.
-- `--format json|pretty|auto` on all data commands (default: auto)
-- `--pretty` shorthand for `--format pretty`
-- `--json` shorthand on trends/insights
+- `--format json|pretty|auto` on all data commands (default: auto).
+- `--pretty` shorthand for `--format pretty`.
+- `--json` shorthand on trends/insights.
 
 ## Exit codes
 
@@ -95,15 +125,26 @@ whoop-cli auth logout   # clear tokens
 | 3 | Rate limited |
 | 4 | Network error |
 
+## Error handling for agents
+
+- **Exit code 2**: Auth failed. Tell the user to run `whoop auth login` manually (requires browser).
+- **Exit code 3**: Rate limited. Wait and retry.
+- **Exit code 4**: Network issue. Retry after a few seconds.
+- If `whoop` is not found, tell the user to install: `npm install -g @tomasward/whoop-cli`.
+
 ## Date handling
 
-- Default: WHOOP day (4am local time cutoff)
-- `--date YYYY-MM-DD` for specific dates
-- `--start` / `--end` for range queries on data and multi commands
-- `--all` / `-a` to paginate through all results
+- Default: WHOOP day (4am local time cutoff).
+- `--date YYYY-MM-DD` for specific dates.
+- `--start` / `--end` for range queries on data and multi commands.
+- `--all` / `-a` to paginate through all results.
 
-## Notes
+## When not to use
 
-- Tokens stored in `~/.whoop-cli/tokens.json` (auto-refresh on API calls)
-- Uses WHOOP API v2
-- WHOOP apps with <10 users don't need review (immediate use)
+- This skill requires the CLI to be installed and authenticated. It cannot query the WHOOP API directly.
+- If the user needs real-time streaming data or webhook integrations, this CLI does not support that.
+
+## Links
+
+- [GitHub](https://github.com/TomasWard1/whoop-cli)
+- [WHOOP Developer Portal](https://developer.whoop.com)
