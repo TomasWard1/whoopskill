@@ -14,6 +14,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -70,12 +71,14 @@ jobs:
         if: steps.bump.outputs.type != 'none'
         run: npm publish --provenance
 
-      - name: Create git tag
+      - name: Commit version bump and tag
         if: steps.version.outputs.new_version != ''
         env:
           VERSION: ${{ steps.version.outputs.new_version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "chore: release v${VERSION} [skip ci]"
           git tag "v${VERSION}"
-          git push origin "v${VERSION}"
+          git push origin main --follow-tags
