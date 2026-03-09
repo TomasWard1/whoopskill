@@ -1,4 +1,7 @@
 import { Command } from 'commander';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const pkg = require('../package.json') as { version: string };
 import { login, logout, status as authStatus, refresh as authRefresh } from './auth/oauth.js';
 import { keepalive } from './auth/keepalive.js';
 import { getTokenStatus, isTokenExpired, loadTokens } from './auth/tokens.js';
@@ -22,7 +25,7 @@ function getFormat(options: { format?: string; pretty?: boolean }): OutputFormat
 program
   .name('whoop-cli')
   .description('Agent-first CLI for the WHOOP API')
-  .version('2.0.0')
+  .version(pkg.version)
   .enablePositionalOptions();
 
 program
