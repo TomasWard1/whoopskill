@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,6 +74,4 @@ jobs:
 
       - name: Publish
         if: steps.check.outputs.bump == 'true' && steps.bump.outputs.type != 'none' || steps.check.outputs.bump == 'false'
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance
