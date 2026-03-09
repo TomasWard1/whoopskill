@@ -149,6 +149,20 @@ whoop recovery --pretty           # Shorthand
 
 ## For Agents
 
+### Install as an agent skill
+
+Teach your AI coding agent (Claude Code, Cursor, Copilot, Codex, etc.) how to use WHOOP data:
+
+```bash
+npx skills add TomasWard1/whoop-cli
+```
+
+This installs the skill globally — your agent will automatically use `whoop` commands when you ask about health metrics, recovery, sleep, or strain.
+
+> Requires the CLI to be installed separately: `npm install -g @tomasward/whoop-cli`
+
+### JSON output
+
 Agents get JSON automatically when output is piped. Recommended starting point:
 
 ```bash
