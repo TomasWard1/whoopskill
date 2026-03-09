@@ -14,7 +14,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -32,13 +31,13 @@ jobs:
           echo "local=$LOCAL" >> "$GITHUB_OUTPUT"
           echo "remote=$REMOTE" >> "$GITHUB_OUTPUT"
           if [ "$LOCAL" = "$REMOTE" ]; then
-            echo "bump=true" >> "$GITHUB_OUTPUT"
+            echo "needs_bump=true" >> "$GITHUB_OUTPUT"
           else
-            echo "bump=false" >> "$GITHUB_OUTPUT"
+            echo "needs_bump=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Determine version bump
-        if: steps.check.outputs.bump == 'true'
+        if: steps.check.outputs.needs_bump == 'true'
         id: bump
         run: |
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
@@ -60,18 +59,24 @@ jobs:
             echo "type=none" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Bump version
-        if: steps.check.outputs.bump == 'true' && steps.bump.outputs.type != 'none'
+      - name: Bump version (local only)
+        if: steps.check.outputs.needs_bump == 'true' && steps.bump.outputs.type != 'none'
+        id: version
+        run: |
+          npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Publish
+        if: steps.check.outputs.needs_bump == 'false' || (steps.check.outputs.needs_bump == 'true' && steps.bump.outputs.type != 'none')
+        run: npm publish --provenance
+
+      - name: Create git tag
+        if: steps.version.outputs.new_version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.new_version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
-          VERSION=$(node -p "require('./package.json').version")
-          git add package.json package-lock.json
-          git commit -m "chore: release v${VERSION}"
           git tag "v${VERSION}"
-          git push origin main --follow-tags
-
-      - name: Publish
-        if: steps.check.outputs.bump == 'true' && steps.bump.outputs.type != 'none' || steps.check.outputs.bump == 'false'
-        run: npm publish --provenance
+          git push origin "v${VERSION}"
