@@ -242,6 +242,10 @@ npm run dev        # Run with tsx
 npm run build      # Compile TypeScript
 ```
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=TomasWard1/whoop-cli&type=Date)](https://star-history.com/#TomasWard1/whoop-cli&Date)
+
 ## License
 
 MIT
