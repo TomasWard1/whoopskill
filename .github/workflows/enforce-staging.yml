@@ -1,0 +1,26 @@
+name: Enforce staging-first flow
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened]
+
+jobs:
+  check-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Block non-staging PRs to main
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$HEAD_REF" != "staging" ]; then
+            gh pr comment "$PR_NUMBER" --repo "$GH_REPO" \
+              --body "PRs to main must come from staging. Please target staging instead."
+            gh pr close "$PR_NUMBER" --repo "$GH_REPO"
+            echo "::error::PRs to main must come from staging branch."
+            exit 1
+          fi
+          echo "PR from staging — allowed."
