@@ -48,6 +48,7 @@ Then it opens your browser for OAuth. Authorize, paste the callback URL, done. T
 whoop check              # Today's health snapshot
 whoop summary --color    # Color-coded with status indicators
 whoop insights           # Personalized recommendations
+whoop awake              # Is user awake? (exit 0 = yes, 1 = no)
 ```
 
 In a terminal, `check` shows a human-readable summary:
@@ -141,8 +142,8 @@ whoop recovery --pretty           # Shorthand
 
 | Code | Meaning |
 |------|---------|
-| 0 | Success |
-| 1 | General error |
+| 0 | Success / awake (for `whoop awake`) |
+| 1 | General error / not awake (for `whoop awake`) |
 | 2 | Auth error (not logged in, bad credentials) |
 | 3 | Rate limit exceeded |
 | 4 | Network error |
@@ -153,6 +154,21 @@ Agents get JSON automatically when output is piped. Recommended starting point:
 
 ```bash
 whoop check    # → {"ok":true,"recovery_score":75,"hrv_rmssd_milli":106,...}
+```
+
+### Awake detection (heartbeat gating)
+
+Before running heartbeats or reporting sleep-dependent metrics, check if the user is awake:
+
+```bash
+whoop awake    # exit 0 = awake (recovery scored), exit 1 = likely sleeping
+```
+
+`whoop awake` checks if today's recovery `score_state` is `SCORED`. Whoop calculates recovery after sleep finishes, so an unscored recovery means the user is likely still asleep. Use this to gate heartbeat workflows and avoid reporting invalid metrics.
+
+```bash
+# Agent heartbeat pattern
+whoop awake && whoop check    # Only report if awake
 ```
 
 ### Agent self-install

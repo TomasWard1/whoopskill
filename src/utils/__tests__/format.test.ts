@@ -125,6 +125,7 @@ describe('extractSummary', () => {
     expect(result.sleep_efficiency).toBe(93);
     expect(result.strain).toBe(12.5);
     expect(result.workout_count).toBe(1);
+    expect(result.recovery_score_state).toBe('SCORED');
   });
 
   it('result is JSON-serializable', () => {

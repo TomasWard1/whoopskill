@@ -53,6 +53,7 @@ export interface SummaryData {
   sleep_performance?: number;
   sleep_hours?: number;
   sleep_efficiency?: number;
+  recovery_score_state?: string;
   strain?: number;
   calories?: number;
   workout_count?: number;
@@ -62,10 +63,12 @@ export function extractSummary(data: WhoopData): SummaryData {
   const summary: SummaryData = { date: data.date };
 
   if (data.recovery?.length) {
-    const r = data.recovery[0].score;
+    const rec = data.recovery[0];
+    const r = rec.score;
     summary.recovery_score = r.recovery_score;
     summary.hrv_rmssd_milli = Math.round(r.hrv_rmssd_milli * 10) / 10;
     summary.resting_heart_rate = r.resting_heart_rate;
+    summary.recovery_score_state = rec.score_state;
     if (r.spo2_percentage) summary.spo2_percentage = r.spo2_percentage;
     if (r.skin_temp_celsius) summary.skin_temp_celsius = Math.round(r.skin_temp_celsius * 10) / 10;
   }

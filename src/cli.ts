@@ -244,6 +244,39 @@ program
   });
 
 program
+  .command('awake')
+  .description('Check if user is awake based on recovery score_state. Exit 0 = awake, 1 = not awake.')
+  .option('-d, --date <date>', 'Date in ISO format (YYYY-MM-DD)')
+  .option('-f, --format <format>', 'Output format: json, pretty, auto (default: auto)', 'auto')
+  .action(async (options) => {
+    try {
+      const date = options.date || getWhoopDay();
+      if (options.date && !validateISODate(options.date)) {
+        throw new WhoopError('Invalid date format. Use YYYY-MM-DD', ExitCode.GENERAL_ERROR);
+      }
+
+      const result = await fetchData(['recovery'], date, { limit: 25 });
+      const tty = resolveFormat(options.format || 'auto') === 'pretty';
+      const scoreState = result.recovery?.[0]?.score_state;
+      const awake = scoreState === 'SCORED';
+
+      if (tty) {
+        console.log(awake ? '✅ Awake (recovery scored)' : '😴 Likely sleeping (recovery pending)');
+      } else {
+        console.log(JSON.stringify({
+          awake,
+          score_state: scoreState ?? null,
+          checked_at: nowISO(),
+        }));
+      }
+
+      process.exit(awake ? 0 : 1);
+    } catch (error) {
+      handleError(error);
+    }
+  });
+
+program
   .command('check')
   .description('Quick health check: auth + today\'s key metrics in one call')
   .option('-d, --date <date>', 'Date in ISO format (YYYY-MM-DD)')
