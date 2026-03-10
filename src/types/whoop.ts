@@ -39,7 +39,7 @@ export interface SleepScore {
 }
 
 export interface WhoopSleep {
-  id: number;
+  id: string;
   user_id: number;
   created_at: string;
   updated_at: string;
@@ -47,7 +47,9 @@ export interface WhoopSleep {
   end: string;
   timezone_offset: string;
   nap: boolean;
+  score_state: string;
   score: SleepScore;
+  cycle_id: number;
 }
 
 export interface RecoveryScore {
@@ -77,6 +79,7 @@ export interface WorkoutScore {
   percent_recorded?: number;
   distance_meter?: number;
   altitude_gain_meter?: number;
+  altitude_change_meter?: number;
   zone_durations?: {
     zone_zero_milli: number;
     zone_one_milli: number;
@@ -125,10 +128,11 @@ export interface WhoopCycle {
   created_at: string;
   updated_at: string;
   start: string;
-  end: string;
+  end?: string;
   timezone_offset: string;
-  score: CycleScore;
-  recovery: CycleRecovery;
+  score_state: string;
+  score?: CycleScore;
+  recovery?: CycleRecovery;
 }
 
 export interface ApiResponse<T> {
