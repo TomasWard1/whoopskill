@@ -250,3 +250,7 @@ npm run build      # Compile TypeScript
 ## License
 
 MIT
+
+## Disclaimer
+
+This project is not affiliated with, endorsed by, or sponsored by WHOOP, Inc. WHOOP is a registered trademark of WHOOP, Inc. Use of the WHOOP API is subject to WHOOP's [developer terms](https://developer.whoop.com).
