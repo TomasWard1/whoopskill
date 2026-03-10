@@ -12,6 +12,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Determine bump type from staging commits
+        id: bump
+        run: |
+          COMMITS=$(git log origin/main..origin/staging --pretty=format:"%s" 2>/dev/null || echo "")
+          echo "--- Commits on staging not on main ---"
+          echo "$COMMITS"
+
+          if echo "$COMMITS" | grep -qE "^feat(\(.+\))?!:|BREAKING CHANGE"; then
+            TYPE="feat!"
+          elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
+            TYPE="feat"
+          elif echo "$COMMITS" | grep -qE "^fix(\(.+\))?:"; then
+            TYPE="fix"
+          else
+            TYPE="chore"
+          fi
+          echo "type=$TYPE" >> "$GITHUB_OUTPUT"
       - name: Check for existing PR
         id: check
         env:
@@ -23,9 +40,19 @@ jobs:
         if: steps.check.outputs.pr_number == ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUMP_TYPE: ${{ steps.bump.outputs.type }}
         run: |
           gh pr create \
             --base main \
             --head staging \
-            --title "chore: promote staging to main" \
+            --title "${BUMP_TYPE}: promote staging to main" \
             --body "Automated PR from staging after CI passed."
+      - name: Update existing PR title
+        if: steps.check.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUMP_TYPE: ${{ steps.bump.outputs.type }}
+          PR_NUMBER: ${{ steps.check.outputs.pr_number }}
+        run: |
+          gh pr edit "$PR_NUMBER" \
+            --title "${BUMP_TYPE}: promote staging to main"
