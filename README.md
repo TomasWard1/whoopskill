@@ -136,6 +136,7 @@ whoop recovery --pretty           # Shorthand
 | `-a, --all` | Fetch all pages |
 | `-f, --format <fmt>` | `json`, `pretty`, or `auto` (default: auto) |
 | `-p, --pretty` | Shorthand for `--format pretty` |
+| `--json` | Shorthand for `--format json` (trends, insights) |
 
 ## Exit Codes
 
@@ -237,7 +238,7 @@ WHOOP access tokens expire every hour and use [refresh token rotation](https://d
 git clone https://github.com/TomasWard1/whoop-cli.git
 cd whoop-cli
 npm install
-npm test           # 65 tests
+npm test           # 78 tests
 npm run dev        # Run with tsx
 npm run build      # Compile TypeScript
 ```
