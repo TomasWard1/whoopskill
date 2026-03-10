@@ -6,8 +6,6 @@ vi.mock('node:fs');
 vi.mock('node:os', () => ({ homedir: vi.fn(() => '/fake/home') }));
 
 let loadTokens: typeof import('../tokens.js').loadTokens;
-let saveTokens: typeof import('../tokens.js').saveTokens;
-let clearTokens: typeof import('../tokens.js').clearTokens;
 let isTokenExpired: typeof import('../tokens.js').isTokenExpired;
 let refreshAccessToken: typeof import('../tokens.js').refreshAccessToken;
 let getValidTokens: typeof import('../tokens.js').getValidTokens;
@@ -39,8 +37,6 @@ beforeEach(async () => {
 
   const mod = await import('../tokens.js');
   loadTokens = mod.loadTokens;
-  saveTokens = mod.saveTokens;
-  clearTokens = mod.clearTokens;
   isTokenExpired = mod.isTokenExpired;
   refreshAccessToken = mod.refreshAccessToken;
   getValidTokens = mod.getValidTokens;
