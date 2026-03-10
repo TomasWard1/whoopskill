@@ -86,7 +86,7 @@ export function analyzeTrends(
     .map(s => s.score.stage_summary.total_in_bed_time_milli / 3600000);
 
   const strainValues = sortedCycle
-    .filter(c => c.score?.strain != null)
+    .filter((c): c is typeof c & { score: NonNullable<typeof c.score> } => c.score?.strain != null)
     .map(c => c.score.strain);
 
   return {
