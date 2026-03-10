@@ -44,11 +44,17 @@ Then it opens your browser for OAuth. Authorize, paste the callback URL, done. T
 ### Quick check
 
 ```bash
-whoop check              # Today's health snapshot
-whoop summary --color    # Color-coded with status indicators
-whoop insights           # Personalized recommendations
-whoop awake              # Is user awake? (exit 0 = yes, 1 = no)
+whoop check              # Today's health snapshot (auth + recovery + sleep + strain)
+whoop check -d 2026-01-15    # Specific date
+whoop summary            # One-liner: recovery score, HRV, sleep, strain
+whoop summary --color    # Color-coded output with status indicators
+whoop summary -d 2026-01-15  # Summary for a specific date
+whoop insights           # AI-style health recommendations (uses last 7 days)
+whoop awake              # Is user awake? (exit 0 = awake, 1 = likely sleeping)
+whoop awake -d 2026-01-15    # Check awake state for a specific date
 ```
+
+`check` combines an auth verification with today's key metrics in a single call. `summary` is the same snapshot without the auth check. `awake` checks if today's recovery `score_state` is `SCORED` — useful for gating agent heartbeats on sleep completion.
 
 In a terminal, `check` shows a human-readable summary:
 
@@ -84,17 +90,25 @@ whoop workout -s 2026-01-01 -e 2026-03-01 -a      # All pages
 ### Trends & insights
 
 ```bash
-whoop trends                # 7-day trends
+whoop trends                # 7-day trends (recovery, sleep, strain averages)
 whoop trends --days 30      # Any period (1-90 days)
-whoop insights              # Health recommendations
+whoop trends --json         # Output as JSON
+whoop insights              # Health recommendations based on last 7 days
+whoop insights -d 2026-01-15   # Recommendations as of a specific date
+whoop insights --json       # Output as JSON
 ```
 
 ### Multi-type fetch
 
+Fetch any combination of data types in a single call:
+
 ```bash
 whoop multi --sleep --recovery --body
 whoop multi --sleep --workout -s 2026-01-01 -e 2026-03-01 -a
+whoop multi --cycle --profile -d 2026-01-15
 ```
+
+Available data type flags: `--sleep`, `--recovery`, `--workout`, `--cycle`, `--profile`, `--body`. At least one must be specified.
 
 ### Auth
 

@@ -40,8 +40,12 @@ jobs:
             RANGE="${LAST_TAG}..HEAD"
           fi
 
-          COMMITS=$(git log "$RANGE" --pretty=format:"%s" 2>/dev/null || echo "")
-          echo "--- Commits since last tag ---"
+          # Use --first-parent to only see merge commits on main,
+          # not individual commits from feature branches via staging.
+          # Parse full commit message (subject + body) since GitHub merge
+          # commits have the PR title in the body.
+          COMMITS=$(git log "$RANGE" --first-parent --pretty=format:"%B" 2>/dev/null || echo "")
+          echo "--- First-parent commits since last tag ---"
           echo "$COMMITS"
 
           if echo "$COMMITS" | grep -qE "^feat(\(.+\))?!:|BREAKING CHANGE"; then
