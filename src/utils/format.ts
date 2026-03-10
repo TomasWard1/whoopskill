@@ -35,7 +35,7 @@ export function formatPretty(data: WhoopData): string {
     }
   }
 
-  if (data.cycle?.length) {
+  if (data.cycle?.length && data.cycle[0].score) {
     const c = data.cycle[0].score;
     lines.push(`🔄 Day strain: ${c.strain.toFixed(1)} | ${(c.kilojoule / 4.184).toFixed(0)} cal | Avg HR: ${c.average_heart_rate}`);
   }
@@ -80,7 +80,7 @@ export function extractSummary(data: WhoopData): SummaryData {
     summary.sleep_efficiency = Math.round(s.sleep_efficiency_percentage);
   }
 
-  if (data.cycle?.length) {
+  if (data.cycle?.length && data.cycle[0].score) {
     const c = data.cycle[0].score;
     summary.strain = Math.round(c.strain * 10) / 10;
     summary.calories = Math.round(c.kilojoule / 4.184);
@@ -108,7 +108,7 @@ export function formatSummary(data: WhoopData): string {
     parts.push(`Sleep: ${s.sleep_performance_percentage}%`);
   }
 
-  if (data.cycle?.length) {
+  if (data.cycle?.length && data.cycle[0].score) {
     parts.push(`Strain: ${data.cycle[0].score.strain.toFixed(1)}`);
   }
 
@@ -142,7 +142,7 @@ export function formatSummaryColor(data: WhoopData): string {
     lines.push(`${icon} Sleep: ${s.sleep_performance_percentage}% | ${hours}h | Efficiency: ${s.sleep_efficiency_percentage.toFixed(0)}%`);
   }
 
-  if (data.cycle?.length) {
+  if (data.cycle?.length && data.cycle[0].score) {
     const c = data.cycle[0].score;
     const recoveryScore = data.recovery?.[0]?.score?.recovery_score ?? 50;
     const optimal = recoveryScore >= 67 ? 14 : recoveryScore >= 34 ? 10 : 6;
