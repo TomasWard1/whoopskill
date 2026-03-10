@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WhoopError, ExitCode } from '../../utils/errors.js';
 
 vi.mock('../../auth/tokens.js', () => ({
